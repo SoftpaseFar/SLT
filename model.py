@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as f
 
 
 class Transformer(nn.Module):
@@ -27,8 +27,8 @@ class Encoder(nn.Module):
     def forward(self, src, src_mask):
         for layer in self.layers:
             src = layer(src, src_mask)
-        src = self.norm(src)
-        return src
+        output = self.norm(src)
+        return output
 
 
 class EncoderLayer(nn.Module):
@@ -37,13 +37,21 @@ class EncoderLayer(nn.Module):
         self.self_attn = nn.MultiheadAttention(hidden_dim, num_heads, dropout=dropout)
         self.linear = nn.Linear(hidden_dim, hidden_dim)
         self.dropout = nn.Dropout(dropout)
-        self.norm = nn.LayerNorm(hidden_dim)
+        self.norm1 = nn.LayerNorm(hidden_dim)
+        self.norm2 = nn.LayerNorm(hidden_dim)
 
     def forward(self, src, src_mask):
-        src2 = self.self_attn(src, src, src, attn_mask=src_mask)[0]
-        src = src + self.dropout(self.linear(src2))
-        src = self.norm(src)
-        return src
+        # Step 1: Self-Attention Mechanism
+        mh_output = self.self_attn(src, src, src, attn_mask=src_mask)[0]
+        rc_1 = src + self.dropout(mh_output)  # Residual Connection
+        src_1 = self.norm1(rc_1)  # Layer Normalization
+
+        # Step 2: Feedforward Neural Network (FFN)
+        ff_output = f.relu(self.linear(src_1))
+        rc_2 = src_1 + self.dropout(ff_output)  # Residual Connection
+        output = self.norm2(rc_2)  # Layer Normalization
+
+        return output
 
 
 class Decoder(nn.Module):
@@ -68,13 +76,24 @@ class DecoderLayer(nn.Module):
         self.linear1 = nn.Linear(hidden_dim, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, output_dim)
         self.dropout = nn.Dropout(dropout)
-        self.norm = nn.LayerNorm(hidden_dim)
+        self.norm1 = nn.LayerNorm(hidden_dim)
+        self.norm2 = nn.LayerNorm(hidden_dim)
+        self.norm3 = nn.LayerNorm(hidden_dim)
 
     def forward(self, tgt, enc_output, src_mask, tgt_mask):
+        # Self-Attention Mechanism
         tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask)[0]
-        tgt = tgt + self.dropout(self.linear1(tgt2))
-        tgt = self.norm(tgt)
+        tgt = tgt + self.dropout(tgt2)
+        tgt = self.norm1(tgt)
+
+        # Src-Attention Mechanism
         tgt2 = self.src_attn(tgt, enc_output, enc_output, attn_mask=src_mask)[0]
-        tgt = tgt + self.dropout(self.linear2(tgt2))
-        tgt = self.norm(tgt)
+        tgt = tgt + self.dropout(tgt2)
+        tgt = self.norm2(tgt)
+
+        # Feedforward Neural Network (FFN)
+        tgt2 = self.linear2(f.relu(self.linear1(tgt)))
+        tgt = tgt + self.dropout(tgt2)
+        tgt = self.norm3(tgt)
+
         return tgt
