@@ -35,7 +35,8 @@ class EncoderLayer(nn.Module):
     def __init__(self, hidden_dim, num_heads, dropout):
         super(EncoderLayer, self).__init__()
         self.self_attn = nn.MultiheadAttention(hidden_dim, num_heads, dropout=dropout)
-        self.linear = nn.Linear(hidden_dim, hidden_dim)
+        self.linear1 = nn.Linear(hidden_dim, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
         self.dropout = nn.Dropout(dropout)
         self.norm1 = nn.LayerNorm(hidden_dim)
         self.norm2 = nn.LayerNorm(hidden_dim)
@@ -47,7 +48,7 @@ class EncoderLayer(nn.Module):
         src_1 = self.norm1(rc_1)  # Layer Normalization
 
         # Step 2: Feedforward Neural Network (FFN)
-        ff_output = f.relu(self.linear(src_1))
+        ff_output = self.linear2(f.relu(self.linear1(src_1)))
         rc_2 = src_1 + self.dropout(ff_output)  # Residual Connection
         output = self.norm2(rc_2)  # Layer Normalization
 
