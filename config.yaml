@@ -18,3 +18,7 @@ data:
   test_label_path: ./data/Phonexi-2014T/labels.test
   img_path: /mnt/Data/datasets/SLT/PHOENIX-2014-T/fullFrame-210x260px/
   max_length: 300
+
+model:
+  tokenizer: /pretrain_models/MBart_trimmed
+

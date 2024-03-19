@@ -4,6 +4,7 @@ import torch.nn.functional as f
 from torch import Tensor
 import torchvision
 from torch.nn.utils.rnn import pad_sequence
+from definition import *
 
 
 class VEncoder(nn.Module):
@@ -61,6 +62,7 @@ class TemporalConv(nn.Module):
         x = self.temporal_conv(x.permute(0, 2, 1))
         return x.permute(0, 2, 1)
 
+
 def make_resnet(name='resnet18'):
     if name == 'resnet18':
         model = torchvision.models.resnet18(pretrained=True)
@@ -71,15 +73,16 @@ def make_resnet(name='resnet18'):
     elif name == 'resnet101':
         model = torchvision.models.resnet101(pretrained=True)
     else:
-        raise Exception('There are no supported resnet model {}.')
+        raise Exception('There are no supported resnet model.')
 
-    inchannel = model.fc.in_features
+    # in_channel = model.fc.in_features
     model.fc = nn.Identity()
     return model
 
-class resnet(nn.Module):
+
+class ResNet(nn.Module):
     def __init__(self):
-        super(resnet, self).__init__()
+        super(ResNet, self).__init__()
         self.resnet = make_resnet(name='resnet18')
 
     def forward(self, x, lengths):
@@ -97,17 +100,14 @@ class resnet(nn.Module):
 class FeatureExtracter(nn.Module):
     def __init__(self, frozen=False):
         super(FeatureExtracter, self).__init__()
-        self.conv_2d = resnet()  # InceptionI3d()
+        self.conv_2d = ResNet()  # InceptionI3d()
         self.conv_1d = TemporalConv(input_size=512, hidden_size=1024, conv_type=2)
 
         if frozen:
             for param in self.conv_2d.parameters():
                 param.requires_grad = False
 
-    def forward(self,
-                src: Tensor,
-                src_length_batch
-                ):
+    def forward(self, src: Tensor, src_length_batch):
         src = self.conv_2d(src, src_length_batch)
         src = self.conv_1d(src)
 
