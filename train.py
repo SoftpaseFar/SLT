@@ -2,7 +2,7 @@ import torch
 import os
 import yaml
 import argparse
-from transformers import MBartForConditionalGeneration, MBartTokenizer,MBartConfig
+from transformers import AutoTokenizer
 
 
 def get_args_parser():
@@ -14,13 +14,16 @@ def get_args_parser():
     return a_parser
 
 
+def get_tokenizer():
+    return []
+
 def main(argus, conf):
     # 获取设备
     device = torch.device(args.device)
 
     # 数据集准备
     print(f"Creating dataset:")
-    tokenizer = MBartTokenizer.from_pretrained(config['model']['tokenizer'])
+    tokenizer = get_tokenizer()
     # train_data = S2T_Dataset(path=config['data']['train_label_path'], tokenizer=tokenizer, config=config, args=args,
     #                          phase='train')
     # print(train_data)
