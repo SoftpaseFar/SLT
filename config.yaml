@@ -20,5 +20,5 @@ data:
   max_length: 300
 
 model:
-  tokenizer: /pretrain_models/MBart_trimmed
+  tokenizer: bert-base-uncased
 

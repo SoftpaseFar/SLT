@@ -10,12 +10,15 @@ def get_args_parser():
     a_parser.add_argument('--batch-size', default=16, type=int)
     a_parser.add_argument('--epochs', default=10, type=int)
     a_parser.add_argument('--config', type=str, default='./config.yaml')
-    parser.add_argument('--device', default='cuda', help='device to use for training / testing')
+    a_parser.add_argument('--device', default='cuda', help='device to use for training / testing')
+    a_parser.add_argument('--resize', default=256, type=int)
     return a_parser
 
 
-def get_tokenizer():
-    return []
+def get_tokenizer(config):
+    tokenizer = AutoTokenizer.from_pretrained(config['model']['tokenizer'])
+    return tokenizer
+
 
 def main(argus, conf):
     # 获取设备
@@ -23,7 +26,7 @@ def main(argus, conf):
 
     # 数据集准备
     print(f"Creating dataset:")
-    tokenizer = get_tokenizer()
+    tokenizer = get_tokenizer(config)
     # train_data = S2T_Dataset(path=config['data']['train_label_path'], tokenizer=tokenizer, config=config, args=args,
     #                          phase='train')
     # print(train_data)
