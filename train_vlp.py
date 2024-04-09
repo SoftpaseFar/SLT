@@ -106,7 +106,11 @@ def main(args, config):
     model = FeatureExtra()
     model.to(device)
     print("222222")
-    print(model(src['input_ids']))
+    try:
+        output = model(src['input_ids'])
+        print(output)
+    except Exception as e:
+        print("Model execution failed:", e)
     print("333333")
 
 
