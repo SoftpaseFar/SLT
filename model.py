@@ -17,18 +17,8 @@ def make_head(in_planes, planes, head_type):
 
 # CLIP文本编码器
 class TextCLIP(nn.Module):
-    def __init__(self, config=None, in_planes=1024, planes=1024, head_type='identy'):
+    def __init__(self):
         super(TextCLIP, self).__init__()
-        # 获取文本编码器
-        self.model_txt = MBartForConditionalGeneration.from_pretrained(config['model']['MBart_ver1']).get_encoder()
-        # 设置输出头维度
-        self.lm_head = make_head(in_planes, planes, head_type)
-
-    def forward(self, tgt_input):
-        txt_logits = self.model_txt(input_ids=tgt_input['input_ids'].cuda(),
-                                    attention_mask=tgt_input['attention_mask'].cuda())[0]
-        output = txt_logits[torch.arange(txt_logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
-        return self.lm_head(output), txt_logits
 
 
 # CLIP图像编码器
@@ -51,12 +41,8 @@ class TextDecoder(nn.Module):
 
 # CLIP模型
 class CLIP(nn.Module):
-    def __init__(self, config, embed_dim=1024, *args, **kwargs):
+    def __init__(self):
         super(CLIP, self).__init__()
-        self.model_txt = TextCLIP(config, inplanes=embed_dim, planes=embed_dim)
-        self.model_images = ImageCLIP(config, inplanes=embed_dim, planes=embed_dim)
-
-        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
 
 # 图片特征提取

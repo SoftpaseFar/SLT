@@ -19,8 +19,8 @@ def get_args_parser():
     a_parser.add_argument('--epochs', default=10, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
-    # a_parser.add_argument('--device', default='cpu')
-    a_parser.add_argument('--device', default='cuda')
+    a_parser.add_argument('--device', default='cpu')
+    # a_parser.add_argument('--device', default='cuda')
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
     a_parser.add_argument('--pin_mem', action='store_true', default=True)
@@ -101,10 +101,13 @@ def main(args, config):
     # 检查输出结果是否符合预期
     # print(src)
 
+    print("111111")
     # 创建模型
     model = FeatureExtra()
     model.to(device)
+    print("222222")
     print(model.forward(src['input_ids'].cuda()))
+    print("333333")
 
 
 if __name__ == '__main__':
