@@ -106,7 +106,7 @@ def main(args, config):
     model = FeatureExtra()
     model.to(device)
     print("222222")
-    print(model.forward(src['input_ids'].cuda()))
+    print(model(src['input_ids']))
     print("333333")
 
 
