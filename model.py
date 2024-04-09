@@ -65,13 +65,13 @@ class FeatureExtra(nn.Module):
         super(FeatureExtra, self).__init__()
         # 获取预训练的S3D
         # self.S3D = s3d(weights=S3D_Weights.KINETICS400_V1)
-        self.S3D = torchvision.models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        self.S3D = torchvision.models.resnet18(pretrained=True)
 
         # 是否冻结S3D参数
         if frozen:
             for param in self.S3D.parameters():
                 param.requires_grad = False
 
-    def forward(self, src, src_length_batch=None):
+    def forward(self, src):
         src = self.S3D(src)
         return src
