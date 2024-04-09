@@ -1,0 +1,15 @@
+# 数据集参数
+data:
+  videos_dir: ./data/How2Sign/videos/
+  train_label_path: ./data/How2Sign/test.csv
+  val_label_path: ./data/How2Sign/test.csv
+  test_label_path: ./data/How2Sign/test.csv
+  max_length: 300
+
+# 模型参数
+model:
+  tokenizer: ./pretrain_models/MBart_ver1
+  MBart_ver1: ./pretrain_models/MBart_ver1
+  MBart_ver2: ./pretrain_models/MBart_ver2
+
+
