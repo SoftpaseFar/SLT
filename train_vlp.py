@@ -6,7 +6,7 @@ from pathlib import Path
 from transformers import MBartForConditionalGeneration, MBartTokenizer, MBartConfig
 import numpy as np
 import random
-from model import FeatureExtra
+from model import SimpleCNN
 import utils
 from dataset import How2SignDataset
 import torch.backends.cudnn as cudnn
@@ -103,7 +103,7 @@ def main(args, config):
 
     print("111111")
     # 创建模型
-    model = FeatureExtra()
+    model = SimpleCNN()
     model.to(device)
     print("222222")
     try:

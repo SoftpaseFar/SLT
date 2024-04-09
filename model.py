@@ -1,63 +1,21 @@
 import torch
 import torch.nn as nn
-import numpy as np
-from transformers import MBartForConditionalGeneration, MBartPreTrainedModel, MBartModel, MBartConfig
-from torchvision.models.video import s3d, S3D_Weights
-from torchvision.models import ResNet18_Weights
-import torchvision
+import torch.nn.functional as F
 
 
-# 设置不同的输出头维度
-def make_head(in_planes, planes, head_type):
-    if head_type == 'linear':
-        return nn.Linear(in_planes, planes, bias=False)
-    else:
-        return nn.Identity()
-
-
-# CLIP文本编码器
-class TextCLIP(nn.Module):
+class SimpleCNN(nn.Module):
     def __init__(self):
-        super(TextCLIP, self).__init__()
+        super(SimpleCNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=5)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=5)
+        self.pool = nn.MaxPool2d(2)
+        self.fc1 = nn.Linear(1024, 128)  # 这里的 1024 取决于前面层的输出
+        self.fc2 = nn.Linear(128, 10)  # 假设有10个输出类别
 
-
-# CLIP图像编码器
-class ImageCLIP(nn.Module):
-    def __init__(self, config, in_planes=1024, planes=1024, head_type='linear'):
-        super(ImageCLIP, self).__init__()
-
-    def forward(self):
-        return None
-
-
-# 文本解码器
-class TextDecoder(nn.Module):
-    def __init__(self, config):
-        super(TextDecoder, self).__init__()
-
-    def forward(self):
-        return None
-
-
-# CLIP模型
-class CLIP(nn.Module):
-    def __init__(self):
-        super(CLIP, self).__init__()
-
-
-# 图片特征提取
-class FeatureExtra(nn.Module):
-    def __init__(self, frozen=True):
-        super(FeatureExtra, self).__init__()
-        # 获取预训练的S3D
-        # self.S3D = s3d(weights=S3D_Weights.KINETICS400_V1)
-        self.S3D = torchvision.models.resnet18(pretrained=True)
-
-        # 是否冻结S3D参数
-        if frozen:
-            for param in self.S3D.parameters():
-                param.requires_grad = False
-
-    def forward(self, src):
-        src = self.S3D(src)
-        return src
+    def forward(self, x):
+        x = F.relu(self.pool(self.conv1(x)))
+        x = F.relu(self.pool(self.conv2(x)))
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
