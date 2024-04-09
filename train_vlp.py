@@ -104,7 +104,7 @@ def main(args, config):
     # 创建模型
     model = FeatureExtra()
     model.to(device)
-    print(model.forward(src['input_ids']))
+    print(model.forward(src['input_ids'].cuda()))
 
 
 if __name__ == '__main__':
