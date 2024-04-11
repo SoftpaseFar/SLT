@@ -20,8 +20,8 @@ class TextCLIP(nn.Module):
         self.lm_head = nn.Identity()
 
     def forward(self, tgt_input):
-        txt_logits = self.model_txt(input_ids=tgt_input['input_ids'].cuda(),
-                                    attention_mask=tgt_input['attention_mask'].cuda())[0]
+        txt_logits = self.model_txt(input_ids=tgt_input['input_ids'],
+                                    attention_mask=tgt_input['attention_mask'])[0]
         output = txt_logits[torch.arange(txt_logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
         return self.lm_head(output), txt_logits
 

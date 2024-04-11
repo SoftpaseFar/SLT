@@ -6,10 +6,9 @@ from pathlib import Path
 from transformers import MBartTokenizer
 import numpy as np
 import random
-from model import ImageCLIP
+from model import TextCLIP
 from dataset import How2SignDataset
 from torch.utils.data import DataLoader
-import hiddenlayer as draw
 
 
 def get_args_parser():
@@ -95,15 +94,13 @@ def main(args, config):
     # 测试代码
     # 手动调用collate_fn函数
     val_batch = [val_data[i] for i in range(args['batch_size'])]  # 获取一个batch的数据
-    src_input, _ = val_data.collate_fn(val_batch)  # 调用collate_fn函数
-    # 检查输出结果是否符合预期
-    print(src_input)
+    src_input, tgt_input = val_data.collate_fn(val_batch)  # 调用collate_fn函数
 
     print("111111")
     # 创建模型
-    model = ImageCLIP()
+    model = TextCLIP(config)
     model.to(device)
-    x = model(src_input)
+    x = model(tgt_input)
     print(x)
 
     print("222222")
