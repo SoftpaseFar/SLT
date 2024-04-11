@@ -10,22 +10,14 @@ from torch.nn.utils.rnn import pad_sequence
 from torch import Tensor
 
 
-# 设置不同的输出头维度
-def make_head(in_planes, planes, head_type):
-    if head_type == 'linear':
-        return nn.Linear(in_planes, planes, bias=False)
-    else:
-        return nn.Identity()
-
-
 # CLIP文本编码器
 class TextCLIP(nn.Module):
-    def __init__(self, config=None, in_planes=1024, planes=1024, head_type='identy'):
+    def __init__(self, config=None):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
         self.model_txt = MBartForConditionalGeneration.from_pretrained(config['model']['MBart_ver1']).get_encoder()
         # 设置输出头维度
-        self.lm_head = make_head(in_planes, planes, head_type)
+        self.lm_head = nn.Identity()
 
     def forward(self, tgt_input):
         txt_logits = self.model_txt(input_ids=tgt_input['input_ids'].cuda(),
@@ -34,24 +26,9 @@ class TextCLIP(nn.Module):
         return self.lm_head(output), txt_logits
 
 
-# 文本解码器
-class TextDecoder(nn.Module):
-    def __init__(self, config):
-        super(TextDecoder, self).__init__()
-
-    def forward(self):
-        return None
-
-
-# CLIP模型
-class CLIP(nn.Module):
-    def __init__(self):
-        super(CLIP, self).__init__()
-
-
 # CLIP图像编码器
 class ImageCLIP(nn.Module):
-    def __init__(self, planes=1024, frozen=True):
+    def __init__(self, planes=1024, frozen=False):
         super(ImageCLIP, self).__init__()
         # 获取预训练的S3D,提取视频特征和时间信息
         self.S3D = s3d(weights=S3D_Weights.KINETICS400_V1)
@@ -86,3 +63,18 @@ class ImageCLIP(nn.Module):
         output = self.fc(src)
 
         return output
+
+
+# 文本解码器
+class TextDecoder(nn.Module):
+    def __init__(self, config):
+        super(TextDecoder, self).__init__()
+
+    def forward(self):
+        return None
+
+
+# CLIP模型
+class CLIP(nn.Module):
+    def __init__(self):
+        super(CLIP, self).__init__()
