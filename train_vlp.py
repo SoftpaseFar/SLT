@@ -3,19 +3,18 @@ import torch
 import yaml
 import argparse
 from pathlib import Path
-from transformers import MBartForConditionalGeneration, MBartTokenizer, MBartConfig
+from transformers import MBartTokenizer
 import numpy as np
 import random
-from model import SimpleCNN
-import utils
+from model import ImageCLIP
 from dataset import How2SignDataset
-import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
+import hiddenlayer as draw
 
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=8, type=int)
+    a_parser.add_argument('--batch_size', default=3, type=int)
     a_parser.add_argument('--epochs', default=10, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
@@ -96,22 +95,19 @@ def main(args, config):
     # 测试代码
     # 手动调用collate_fn函数
     val_batch = [val_data[i] for i in range(args['batch_size'])]  # 获取一个batch的数据
-    src, _ = val_data.collate_fn(val_batch)  # 调用collate_fn函数
-
+    src_input, _ = val_data.collate_fn(val_batch)  # 调用collate_fn函数
     # 检查输出结果是否符合预期
-    # print(src)
+    print(src_input)
 
     print("111111")
     # 创建模型
-    model = SimpleCNN()
+    model = ImageCLIP()
     model.to(device)
+    x = model(src_input)
+    print(x)
+
     print("222222")
-    try:
-        output = model(src['input_ids'])
-        print(output)
-    except Exception as e:
-        print("Model execution failed:", e)
-    print("333333")
+    print(x.shape)
 
 
 if __name__ == '__main__':

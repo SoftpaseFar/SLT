@@ -3,9 +3,12 @@ import torch
 import cv2
 import utils
 import random
+import numpy as np
 from PIL import Image
+from definition import *
 from torch.utils.data import Dataset
 from torchvision import transforms
+from torch.nn.utils.rnn import pad_sequence
 
 
 class How2SignDataset(Dataset):
@@ -83,15 +86,45 @@ class How2SignDataset(Dataset):
         # 视频批序列最大长度
         imgs_batch_max_len = max([len(vid) for vid in imgs_batch_tmp])
         # 每个视频帧填充成4的倍数 + 左右填充后的长度
+        imgs_batch_pad_len = torch.LongTensor([np.ceil(len(vid) / 4.0) * 4 + 16 for vid in imgs_batch_tmp])
 
-        # 将batch每个video的imgs序列填充成长度为imgs_batch_max_len
-        imgs_batch = [torch.cat(
+        # 填充成一样的长度是多少
+        left_pad = 8
+        right_pad = int(np.ceil(imgs_batch_max_len / 4.0)) * 4 - imgs_batch_max_len + 8
+        padded_max_len = imgs_batch_max_len + left_pad + right_pad
+
+        # 将batch每个video的imgs序列填充成长度为padded_max_len
+        padded_video_to_max = [torch.cat(
             (
+                vid[0][None].expand(left_pad, -1, -1, -1),
                 vid,
-                torch.zeros(imgs_batch_max_len - len(vid), vid.size(1), vid.size(2), vid.size(3)).to(vid.device)
+                vid[-1][None].expand(padded_max_len - len(vid) - left_pad, -1, -1, -1),
             )
             , dim=0)
             for vid in imgs_batch_tmp]
+        # 原始视频帧各自填充
+        src_padded_video = [padded_video_to_max[i][0:imgs_batch_pad_len[i], :, :, :] for i in
+                            range(len(padded_video_to_max))]
+
+        # 原始视频帧各自填充 长度记录
+        for i in range(len(src_padded_video)):
+            src_length_batch.append(len(src_padded_video[i]))
+        src_length_batch = torch.tensor(src_length_batch)
+
+        # 将一个batch的视频整合在一起:[[1,1,1],[2,2,2],[3,3,3]]=>[1,1,1,2,2,2,3,3,3]
+        imgs_batch = torch.cat(src_padded_video, 0)
+
+        # 卷积操作之后的的长度，根据这个生成输入Transformer等的掩码，暂时没变化
+        new_src_lengths = src_length_batch
+        new_src_lengths = new_src_lengths.long()
+
+        # 根据卷积后的长度生成
+        mask_gen = []
+        for i in new_src_lengths:
+            tmp = torch.ones([i]) + 7
+            mask_gen.append(tmp)
+        mask_gen = pad_sequence(mask_gen, padding_value=PAD_IDX, batch_first=True)
+        imgs_padding_mask = (mask_gen != PAD_IDX).long()
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
@@ -103,7 +136,9 @@ class How2SignDataset(Dataset):
             'name_batch': name_batch,
 
             'input_ids': imgs_batch,
-            'src_length_batch': imgs_batch_max_len}
+            'attention_mask': imgs_padding_mask,
+            'src_length_batch': src_length_batch,
+            'new_src_length_batch': new_src_lengths}
 
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:
