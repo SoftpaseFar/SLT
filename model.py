@@ -12,17 +12,20 @@ from torch import Tensor
 
 # CLIP文本编码器
 class TextCLIP(nn.Module):
-    def __init__(self, config=None):
+    def __init__(self, config=None, in_planes=1024):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
-        self.model_txt = MBartForConditionalGeneration.from_pretrained(config['model']['MBart_ver1']).get_encoder()
+        self.txt_encoder = MBartForConditionalGeneration.from_pretrained(config['model']['MBart_ver1']).get_encoder()
+
         # 设置输出头维度
         self.lm_head = nn.Identity()
 
     def forward(self, tgt_input):
-        txt_logits = self.model_txt(input_ids=tgt_input['input_ids'],
-                                    attention_mask=tgt_input['attention_mask'])[0]
-        output = txt_logits[torch.arange(txt_logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
+        # 隐藏层输出
+        txt_logits = self.txt_encoder(input_ids=tgt_input['input_ids'],
+                                      attention_mask=tgt_input['attention_mask'])[0]
+        # 获取句子编码
+        output = txt_logits[:, tgt_input['input_ids'].argmax(dim=-1)]
         return self.lm_head(output), txt_logits
 
 
@@ -69,6 +72,11 @@ class ImageCLIP(nn.Module):
 class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
+        self.txt_decoder = MBartForConditionalGeneration.from_pretrained(
+            config['model']['MBart_ver2']).get_decoder()
+        self.lm_head = MBartForConditionalGeneration.from_pretrained(
+            config['model']['MBart_ver2']).get_output_embeddings()
+
 
     def forward(self):
         return None

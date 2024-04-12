@@ -36,7 +36,7 @@ def get_args_parser():
 def main(args, config):
     # 获取设备
     device = torch.device(args['device'])
-    print("starting...hold on...")
+    print("starting on...", device, sep=' ')
 
     # 设置随机种子
     seed = args['seed']
@@ -98,13 +98,12 @@ def main(args, config):
 
     print("111111")
     # 创建模型
-    model = TextCLIP(config)
+    model = TextCLIP(config=config)
     model.to(device)
-    x = model(tgt_input)
-    print(x)
-
-    print("222222")
-    print(x.shape)
+    x1, x2 = model(tgt_input)
+    print(x1)
+    print(x1.shape)
+    print(x2.shape)
 
 
 if __name__ == '__main__':

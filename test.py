@@ -66,20 +66,12 @@ if __name__ == '__main__':
     # x = x.view(x.size(0), -1)
     # print(x)
 
-    vid1 = torch.rand(1, 3, 2, 2)  # 1个帧
-    vid2 = torch.rand(2, 3, 2, 2)  # 2个帧
-    vid3 = torch.rand(3, 3, 2, 2)  # 3个帧
-
-    imgs_batch_tmp = [vid1, vid2, vid3]
-    # print(imgs_batch_tmp.shape)
-    imgs_batch = [torch.cat(
-        (
-            vid,
-            torch.zeros(3 - len(vid), vid.size(1), vid.size(2), vid.size(3)).to(vid.device)
-        )
-        , dim=0)
-        for vid in imgs_batch_tmp]
-
-    print(imgs_batch)
-
+    tgt_input = {
+        'input_ids': torch.tensor([[1, 2, 3], [4, 5, 6]]),  # 示例的input_ids
+        'attention_mask': torch.tensor([[1, 1, 1], [1, 1, 1]])  # 示例的attention_mask
+    }
+    txt_logits = torch.randn(2, 3, 10)
+    print(txt_logits)
+    output = txt_logits[:, [2, 2]]
+    print(output)
     pass
