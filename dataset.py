@@ -97,7 +97,10 @@ class How2SignDataset(Dataset):
         # 对于批次中不同长度的文本进行填充
         # 截断过长的文本
         with self.tokenizer.as_target_tokenizer():
-            tgt_input = self.tokenizer(tgt_batch, return_tensors="pt", padding=True, truncation=True)
+            tgt_input = self.tokenizer(tgt_batch,
+                                       return_tensors="pt",
+                                       padding=True,
+                                       truncation=True)
 
         src_input = {
             'name_batch': name_batch,
@@ -111,8 +114,10 @@ class How2SignDataset(Dataset):
                                                random_shuffle=self.args['random_shuffle'],
                                                is_train=(self.phase == 'train'))
             with self.tokenizer.as_target_tokenizer():
-                masked_tgt_input = self.tokenizer.as_target_tokenizer(masked_tgt, return_tensors="pt", padding=True,
-                                                                      truncation=True)
+                masked_tgt_input = self.tokenizer(masked_tgt,
+                                                  return_tensors="pt",
+                                                  padding=True,
+                                                  truncation=True)
             return src_input, tgt_input, masked_tgt_input
 
         # 返回一个batch视频集合 目标翻译的文本

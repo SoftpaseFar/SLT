@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from transformers import MBartForConditionalGeneration, MBartPreTrainedModel, MBartModel, MBartConfig
 from torchvision.models.video import s3d, S3D_Weights
+from transformers.models.mbart.modeling_mbart import shift_tokens_right
 from torchvision.models import ResNet18_Weights
 import torchvision
 from definition import *
@@ -12,7 +13,7 @@ from torch import Tensor
 
 # CLIP文本编码器
 class TextCLIP(nn.Module):
-    def __init__(self, config=None, in_planes=1024):
+    def __init__(self, config=None):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
         self.txt_encoder = MBartForConditionalGeneration.from_pretrained(config['model']['MBart_ver1']).get_encoder()
@@ -22,11 +23,11 @@ class TextCLIP(nn.Module):
 
     def forward(self, tgt_input):
         # 隐藏层输出
-        txt_logits = self.txt_encoder(input_ids=tgt_input['input_ids'],
-                                      attention_mask=tgt_input['attention_mask'])[0]
+        logits = self.txt_encoder(input_ids=tgt_input['input_ids'],
+                                  attention_mask=tgt_input['attention_mask'])[0]
         # 获取句子编码
-        output = txt_logits[:, tgt_input['input_ids'].argmax(dim=-1)]
-        return self.lm_head(output), txt_logits
+        output = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
+        return self.lm_head(output), logits
 
 
 # CLIP图像编码器
@@ -76,13 +77,38 @@ class TextDecoder(nn.Module):
             config['model']['MBart_ver2']).get_decoder()
         self.lm_head = MBartForConditionalGeneration.from_pretrained(
             config['model']['MBart_ver2']).get_output_embeddings()
+        self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
+            config['model']['MBart_ver2']).model.shared.num_embeddings)))
 
+    def forward(self, tgt_input, masked_tgt_input, txt_encoder):
+        with torch.no_grad():
+            _, encoder_hidden_states = txt_encoder(masked_tgt_input)
 
-    def forward(self):
-        return None
+        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
+        decoder_out = self.txt_decoder(
+            input_ids=decoder_input_ids,
+            attention_mask=tgt_input['attention_mask'],
+
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_attention_mask=masked_tgt_input['attention_mask'],
+
+            return_dict=True,
+        )
+        logits = self.lm_head(decoder_out[0]) + self.final_logits_bias
+
+        return logits
 
 
 # CLIP模型
 class CLIP(nn.Module):
-    def __init__(self):
+    def __init__(self, config):
         super(CLIP, self).__init__()
+        self.txt_encoder = TextCLIP(config=config)
+        self.img_encoder = ImageCLIP(planes=1024, frozen=False)
+        # logit缩放比率，可学习参数
+        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        self.encoder_hidden_states = None
+
+    # 获取文本编码器
+    def get_txt_encoder(self):
+        return self.txt_encoder

@@ -6,7 +6,7 @@ from pathlib import Path
 from transformers import MBartTokenizer
 import numpy as np
 import random
-from model import TextCLIP
+from model import TextCLIP, TextDecoder
 from dataset import How2SignDataset
 from torch.utils.data import DataLoader
 
@@ -55,7 +55,8 @@ def main(args, config):
                                  tokenizer=tokenizer,
                                  config=config,
                                  args=args,
-                                 phase='train')
+                                 phase='train',
+                                 training_refurbish=True)
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],
                                   num_workers=args['num_workers'],
@@ -93,17 +94,19 @@ def main(args, config):
 
     # 测试代码
     # 手动调用collate_fn函数
-    val_batch = [val_data[i] for i in range(args['batch_size'])]  # 获取一个batch的数据
-    src_input, tgt_input = val_data.collate_fn(val_batch)  # 调用collate_fn函数
+    train_batch = [train_data[i] for i in range(args['batch_size'])]  # 获取一个batch的数据
+    src_input, tgt_input, masked_tgt_input = train_data.collate_fn(train_batch)  # 调用collate_fn函数
 
-    print("111111")
-    # 创建模型
-    model = TextCLIP(config=config)
-    model.to(device)
-    x1, x2 = model(tgt_input)
-    print(x1)
-    print(x1.shape)
-    print(x2.shape)
+    # 模型推导
+    txt_encoder = TextCLIP(config=config)
+    txt_encoder.to(device)
+    le_head, le_logits = txt_encoder(tgt_input)
+    print(le_head.shape, le_logits.shape)
+    print("==================================")
+    txt_decoder = TextDecoder(config=config)
+    txt_decoder.to(device)
+    ld_logits = txt_decoder(tgt_input, masked_tgt_input, txt_encoder)
+    print(ld_logits.shape)
 
 
 if __name__ == '__main__':
