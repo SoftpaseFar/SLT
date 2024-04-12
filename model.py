@@ -107,8 +107,35 @@ class CLIP(nn.Module):
         self.img_encoder = ImageCLIP(planes=1024, frozen=False)
         # logit缩放比率，可学习参数
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        # 文本编码器的隐藏状态
         self.encoder_hidden_states = None
 
     # 获取文本编码器
     def get_txt_encoder(self):
         return self.txt_encoder
+
+    # encoder_hidden_states只读
+    @property
+    def get_encoder_hidden_states(self):
+        return self.encoder_hidden_states
+
+    def forward(self, src_input, tgt_input):
+        img_features = self.img_encoder(src_input)
+        txt_features, self.encoder_hidden_states = self.txt_encoder(tgt_input)
+
+        # 特征信息归一化
+        img_features = img_features / img_features.norm(dim=-1, keepdim=True)
+        txt_features = txt_features / txt_features.norm(dim=-1, keepdim=True)
+
+        # 计算相似度
+        # 将logit_scale修正为正数
+        logit_scale = self.logit_scale.exp()
+        img_txt_s_matrix = logit_scale * img_features @ txt_features.t()
+        txt_img_s_matrix = logit_scale * txt_features @ img_features.t()
+
+        ground_truth = torch.eye(img_txt_s_matrix.shape[0],
+                                 device=txt_img_s_matrix.device,
+                                 dtype=img_txt_s_matrix.dtype,
+                                 requires_grad=False)
+
+        return img_txt_s_matrix, txt_img_s_matrix, ground_truth

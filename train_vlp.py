@@ -6,7 +6,7 @@ from pathlib import Path
 from transformers import MBartTokenizer
 import numpy as np
 import random
-from model import TextCLIP, TextDecoder
+from model import CLIP, TextDecoder
 from dataset import How2SignDataset
 from torch.utils.data import DataLoader
 
@@ -98,10 +98,9 @@ def main(args, config):
     src_input, tgt_input, masked_tgt_input = train_data.collate_fn(train_batch)  # 调用collate_fn函数
 
     # 模型推导
-    txt_encoder = TextCLIP(config=config)
-    txt_encoder.to(device)
-    le_head, le_logits = txt_encoder(tgt_input)
-    print(le_head.shape, le_logits.shape)
+    clip_model = CLIP(config=config)
+    img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_model(src_input, tgt_input)
+    txt_encoder = clip_model.get_txt_encoder()
     print("==================================")
     txt_decoder = TextDecoder(config=config)
     txt_decoder.to(device)
