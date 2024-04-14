@@ -1,12 +1,12 @@
 torchvision~=0.15.2
 yaml~=0.2.5
 pyyaml~=6.0
-transformers~=4.34.0
-vidaug~=1.5
+transformers~=4.35.2
 numpy~=1.24.3
-einops~=0.7.0
 pandas~=2.0.3
 pathlib~=1.0.1
 opencv-python~=4.9.0.80
 pillow~=10.0.1
 matplotlib~=3.7.2
+torch~=2.2.1
+timm~=0.9.16

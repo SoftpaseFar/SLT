@@ -131,6 +131,12 @@ def noise_injecting(raw_gloss, noise_rate=0.15, random_shuffle=False, is_train=T
     return res_gloss
 
 
+# ------
+# 日志
+def log():
+    pass
+
+
 if __name__ == '__main__':
     # res = load_dataset_cvs('./data/How2Sign/test.csv')
     res = load_dataset_cvs('./data/How2Sign/test.csv')
