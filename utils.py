@@ -3,6 +3,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from definition import *
+import torch
+from pathlib import Path
 
 
 # -------
@@ -135,6 +137,20 @@ def noise_injecting(raw_gloss, noise_rate=0.15, random_shuffle=False, is_train=T
 # 日志
 def log():
     pass
+
+
+# ------
+# 保存检查点
+def save_checkpoint(state, args, filename):
+    save_path = Path(args['checkpoints_dir']) / filename
+    save_dir = save_path.parent
+    save_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        # 保存checkpoint
+        torch.save(state, save_path)
+        print(f"模型检查点保存在：{save_path}")
+    except IOError as e:
+        print(f"保存失败，错误：{e}")
 
 
 if __name__ == '__main__':

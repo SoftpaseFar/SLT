@@ -17,14 +17,14 @@ from timm.scheduler import create_scheduler
 from timm.optim import AdamW
 from timm.utils import NativeScaler
 from loss import KLLoss
-import time
 from definition import *
+import utils
 
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=2, type=int)
-    a_parser.add_argument('--epochs', default=1, type=int)
+    a_parser.add_argument('--epochs', default=2, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cpu')
@@ -34,7 +34,8 @@ def get_args_parser():
     a_parser.add_argument('--pin_mem', action='store_true', default=True)
     a_parser.add_argument('--num_workers', default=8, type=int)
     # a_parser.add_argument('--num_workers', default=2, type=int)
-    a_parser.add_argument('--output_dir', default='./output/test/o_1')
+    a_parser.add_argument('--checkpoints_dir', default='./checkpoints/')
+    a_parser.add_argument('--log_dir', default='./log/')
     a_parser.add_argument('--input_size', default=224, type=int)
 
     a_parser.add_argument('--training_refurbish', default=True, type=bool)
@@ -63,6 +64,9 @@ def get_args_parser():
     a_parser.add_argument('--cooldown-epochs', type=int, default=10, metavar='N')
     a_parser.add_argument('--patience-epochs', type=int, default=10, metavar='N')
     a_parser.add_argument('--decay-rate', '--dr', type=float, default=0.1, metavar='RATE')
+
+    a_parser.add_argument('--save_interval', default=1, type=int)
+    a_parser.add_argument('--save_model', default=True, type=bool)
     return a_parser
 
 
@@ -164,25 +168,30 @@ def main(args_, config):
     )
     loss_scaler = NativeScaler()
 
-    # 输出路径
-    output_dir = Path(args['output_dir'])
-
     # 训练
     print(f"开始训练，共训练 {args['epochs']} 轮.")
 
     # 初始化损失值
     min_loss = np.inf
 
-    print("==================================")
-    train_batch = [train_data[i] for i in range(args['batch_size'])]  # 获取一个batch的数据
-    src_input, tgt_input, masked_tgt_input = train_data.collate_fn(train_batch)  # 调用collate_fn函数
-    res = tgt_input['input_ids'].view(-1)
-    print(res)
+    for epoch in range(args['epochs']):
+        # 训练状态
+        train_stats = train_one_epoch(args, epoch, train_dataloader,
+                                      clip_train_dict, td_train_dict,
+                                      criterion, loss_scaler)
+        # 评估状态
+        val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
+                                       clip_train_dict, td_train_dict,
+                                       criterion, loss_scaler)
 
 
-def train_one_epoch(args, train_dataloader,
+def train_one_epoch(args, epoch, train_dataloader,
                     clip_train_dict, td_train_dict,
-                    criterion, loss_scaler):
+                    criterion, loss_scaler: NativeScaler()):
+    # 状态记录表
+    clip_losses, tdm_losses = [], []
+
+    # 开启训练模式
     clip_train_dict['clip_model'].train(True)
     td_train_dict['txt_decoder'].train(True)
     clip_loss = criterion['loss_kl']
@@ -195,8 +204,12 @@ def train_one_epoch(args, train_dataloader,
             img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input, tgt_input)
             loss_i_t = clip_loss(img_txt_s_matrix, ground_truth)
             loss_t_i = clip_loss(txt_img_s_matrix, ground_truth)
-            clip_loss = (loss_i_t + loss_t_i) / 2.
-        loss_scaler.scale(clip_loss).backward()
+            clip_total_loss = (loss_i_t + loss_t_i) / 2.
+        # 根据梯度模型参数
+        loss_scaler.scale(clip_total_loss).backward()
+        loss_scaler.step(clip_train_dict['optimizer'])
+        loss_scaler.update()
+        clip_losses.append(clip_total_loss.item())
 
         # 5个step 更新解码器
         if step % 5 == 0:
@@ -206,25 +219,54 @@ def train_one_epoch(args, train_dataloader,
                                                           td_train_dict['txt_decoder'].get_txt_encoder())
                 masked_lm_loss = tdm_loss(tdm_logits.view(-1, tdm_logits.shape[-1]),
                                           tgt_input['input_ids'].view(-1)) * args['loss_lambda']
+                # 根据梯度模型参数
                 loss_scaler.scale(masked_lm_loss).backward()
+                loss_scaler.step(td_train_dict['optimizer'])
+                loss_scaler.update()
+                tdm_losses.append(masked_lm_loss.item())
 
         # 梯度爆炸
-        if not math.isfinite(clip_loss.item()):
-            print("Loss: {}, 结束训练".format(clip_loss.item()))
+        if not math.isfinite(clip_total_loss.item()):
+            print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
+            sys.exit(1)
+        if not math.isfinite(masked_lm_loss.item()):
+            print("ML Loss: {}, 结束训练".format(masked_lm_loss.item()))
             sys.exit(1)
 
-        # 根据梯度模型参数
-        loss_scaler.step(clip_train_dict['optimizer'])
-        loss_scaler.step(td_train_dict['optimizer'])
-        loss_scaler.update()
+    # 更新学习率
+    clip_train_dict['lr_scheduler'].step()
+    td_train_dict['lr_scheduler'].step()
 
-        # 更新学习率
-        clip_train_dict['lr_scheduler'].step()
-        td_train_dict['lr_scheduler'].step()
-    # metric_logger
+    avg_clip_loss = sum(clip_losses) / len(clip_losses) if len(clip_losses) > 0 else 0
+    avg_tdm_loss = sum(tdm_losses) / len(tdm_losses) if len(tdm_losses) > 0 else 0
 
-    train_stats = ''
+    if args['save_model'] and epoch % args['save_interval'] == 0:
+        utils.save_checkpoint(state={
+            'epoch': epoch + 1,
+            'clip_train_dict': dict(
+                optimizer=clip_train_dict['optimizer'].state_dict(),
+                lr_scheduler=clip_train_dict['lr_scheduler'].state_dict(),
+                clip_model=clip_train_dict['clip_model'].state_dict()
+            ),
+            'td_train_dict': dict(
+                optimizer=td_train_dict['optimizer'].state_dict(),
+                lr_scheduler=td_train_dict['lr_scheduler'].state_dict(),
+                txt_decoder=td_train_dict['txt_decoder'].state_dict()
+            ),
+            'clip_loss': avg_clip_loss,
+            'tdm_loss': avg_tdm_loss
+        }, args=args, filename=f"checkpoint_{epoch + 1}.pth.tar")
+
+    # 用于返回的状态字典
+    train_stats = {'clip_loss': avg_clip_loss,
+                   'tdm_loss': avg_tdm_loss}
     return train_stats
+
+
+def evaluate_one_epoch(args, epoch, train_dataloader,
+                       clip_train_dict, td_train_dict,
+                       criterion, loss_scaler: NativeScaler()):
+    return ''
 
 
 if __name__ == '__main__':
