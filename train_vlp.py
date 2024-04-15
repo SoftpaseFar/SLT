@@ -8,6 +8,8 @@ from pathlib import Path
 from transformers import MBartTokenizer
 import numpy as np
 import random
+
+import loss
 from model import CLIP, TextDecoder
 from dataset import How2SignDataset
 from torch.utils.data import DataLoader
@@ -23,11 +25,11 @@ import utils
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=2, type=int)
-    a_parser.add_argument('--epochs', default=2, type=int)
+    a_parser.add_argument('--batch_size', default=8, type=int)
+    a_parser.add_argument('--epochs', default=10, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
-    a_parser.add_argument('--device', default='cpu')
+    a_parser.add_argument('--device', default='cuda')
     # a_parser.add_argument('--device', default='cuda')
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
@@ -66,6 +68,7 @@ def get_args_parser():
     a_parser.add_argument('--decay-rate', '--dr', type=float, default=0.1, metavar='RATE')
 
     a_parser.add_argument('--save_interval', default=1, type=int)
+    a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
     return a_parser
 
@@ -171,27 +174,69 @@ def main(args_, config):
     # 训练
     print(f"开始训练，共训练 {args['epochs']} 轮.")
 
-    # 初始化损失值
+    # 初始化损失值和早停计数器
     min_loss = np.inf
+    patience = args['patience']
+    patience_counter = 0
 
     for epoch in range(args['epochs']):
-        # 训练状态
+        # 训练一个epoch
         train_stats = train_one_epoch(args, epoch, train_dataloader,
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
         print(f"Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}")
-
-        # 评估状态
-        val_stats = evaluate_one_epoch(epoch, val_dataloader,
+        # 评估一个epoch
+        val_stats = evaluate_one_epoch(val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
         print(f"Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}")
+        val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
+
+        # 检查是否有新的最低验证损失
+        if val_loss < min_loss:
+            min_loss = val_loss
+            # 重置早停计数器
+            patience_counter = 0
+            print(f"最新val损失 {min_loss:.4f} 在第{epoch + 1}轮, 保存模型中... ")
+            # 保存最佳模型
+            if args['save_model'] and epoch % args['save_interval'] == 0:
+                utils.save_checkpoint(state={
+                    'epoch': epoch + 1,
+                    'clip_train_dict': dict(
+                        optimizer=clip_train_dict['optimizer'].state_dict(),
+                        lr_scheduler=clip_train_dict['lr_scheduler'].state_dict(),
+                        clip_model=clip_train_dict['clip_model'].state_dict()
+                    ),
+                    'td_train_dict': dict(
+                        optimizer=td_train_dict['optimizer'].state_dict(),
+                        lr_scheduler=td_train_dict['lr_scheduler'].state_dict(),
+                        txt_decoder=td_train_dict['txt_decoder'].state_dict()
+                    ),
+                    'train_stats': train_stats,
+                    'val_stats': val_stats,
+                    'best_loss': val_loss
+                }, args=args, filename=f"checkpoint_{epoch + 1}.pth.tar")
+
+        else:
+            patience_counter += 1
+            print(f"在val损失上无提升，对于第{epoch + 1}轮. ")
+
+        # 检查是否达到早停条件
+        if patience_counter >= patience:
+            print(f"训练早停，patience：{patience}，第{epoch + 1}轮.")
+            break
+
+    # 测试集评估
+    print("加载模型用于测试数据集，查看效果，请稍等...")
+    print("代码待完善，程序结束...")
+    # TODO
 
 
-# 训练一个epoch
 def train_one_epoch(args, epoch, dataloader,
                     clip_train_dict, td_train_dict,
                     criterion, loss_scaler: NativeScaler()):
+    print(f"Epoch {epoch + 1} train...")
+
     # 状态记录表
     clip_losses, tdm_losses = [], []
 
@@ -201,11 +246,14 @@ def train_one_epoch(args, epoch, dataloader,
     clip_loss = criterion['loss_kl']
     tdm_loss = criterion['loss_ce']
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
+        print(f"Epoch {epoch + 1} train, Step {step}...")
+
         # 刷新梯度
         clip_train_dict['optimizer'].zero_grad()
         # 采用自动混合精度
         with torch.cuda.amp.autocast():
-            img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input, tgt_input)
+            img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
+                                                                                             tgt_input)
             loss_i_t = clip_loss(img_txt_s_matrix, ground_truth)
             loss_t_i = clip_loss(txt_img_s_matrix, ground_truth)
             clip_total_loss = (loss_i_t + loss_t_i) / 2.
@@ -241,25 +289,7 @@ def train_one_epoch(args, epoch, dataloader,
     clip_train_dict['lr_scheduler'].step()
     td_train_dict['lr_scheduler'].step()
 
-    avg_clip_loss = sum(clip_losses) / len(clip_losses) if len(clip_losses) > 0 else 0
-    avg_tdm_loss = sum(tdm_losses) / len(tdm_losses) if len(tdm_losses) > 0 else 0
-
-    if args['save_model'] and epoch % args['save_interval'] == 0:
-        utils.save_checkpoint(state={
-            'epoch': epoch + 1,
-            'clip_train_dict': dict(
-                optimizer=clip_train_dict['optimizer'].state_dict(),
-                lr_scheduler=clip_train_dict['lr_scheduler'].state_dict(),
-                clip_model=clip_train_dict['clip_model'].state_dict()
-            ),
-            'td_train_dict': dict(
-                optimizer=td_train_dict['optimizer'].state_dict(),
-                lr_scheduler=td_train_dict['lr_scheduler'].state_dict(),
-                txt_decoder=td_train_dict['txt_decoder'].state_dict()
-            ),
-            'clip_loss': avg_clip_loss,
-            'tdm_loss': avg_tdm_loss
-        }, args=args, filename=f"checkpoint_{epoch + 1}.pth.tar")
+    avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, clip_losses)
 
     # 用于返回的状态字典
     train_stats = {'clip_loss': avg_clip_loss,
@@ -268,9 +298,11 @@ def train_one_epoch(args, epoch, dataloader,
 
 
 # 评估一个epoch
-def evaluate_one_epoch(dataloader,
+def evaluate_one_epoch(epoch, dataloader,
                        clip_train_dict, td_train_dict,
                        criterion):
+    print(f"Epoch {epoch + 1} val...")
+
     # 状态记录表
     clip_losses, tdm_losses = [], []
     # 设置模型为评估模式
@@ -278,10 +310,12 @@ def evaluate_one_epoch(dataloader,
     td_train_dict['txt_decoder'].eval()
 
     with torch.no_grad():
-        for src_input, tgt_input, masked_tgt_input in dataloader:
+        for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
+            print(f"Epoch {epoch + 1} val, Step {step}...")
             # 采用自动混合精度
             with torch.cuda.amp.autocast():
-                img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input, tgt_input)
+                img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
+                                                                                                 tgt_input)
                 loss_i_t = criterion['loss_kl'](img_txt_s_matrix, ground_truth)
                 loss_t_i = criterion['loss_kl'](txt_img_s_matrix, ground_truth)
                 clip_total_loss = (loss_i_t + loss_t_i) / 2.
@@ -293,8 +327,7 @@ def evaluate_one_epoch(dataloader,
                                                       tgt_input['input_ids'].view(-1)) * args['loss_lambda']
                 tdm_losses.append(masked_lm_loss.item())
 
-    avg_clip_loss = sum(clip_losses) / len(clip_losses) if len(clip_losses) > 0 else 0
-    avg_tdm_loss = sum(tdm_losses) / len(tdm_losses) if len(tdm_losses) > 0 else 0
+    avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, clip_losses)
 
     eval_stats = {'clip_loss': avg_clip_loss, 'tdm_loss': avg_tdm_loss}
     return eval_stats

@@ -14,3 +14,10 @@ class KLLoss(nn.Module):
         probs2 = F.softmax(label * 10, 1)
         loss = self.error_metric(probs1, probs2) * batch_size
         return loss
+
+
+# 返回clip_losses和tdm_losses的平均值
+def compute_average(clip_losses, tdm_losses):
+    avg_clip_loss = sum(clip_losses) / len(clip_losses) if clip_losses else 0
+    avg_tdm_loss = sum(tdm_losses) / len(tdm_losses) if tdm_losses else 0
+    return avg_clip_loss, avg_tdm_loss
