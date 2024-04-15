@@ -179,13 +179,17 @@ def main(args_, config):
         train_stats = train_one_epoch(args, epoch, train_dataloader,
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
+        print(f"Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}")
+
         # 评估状态
-        val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
+        val_stats = evaluate_one_epoch(epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
-                                       criterion, loss_scaler)
+                                       criterion)
+        print(f"Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}")
 
 
-def train_one_epoch(args, epoch, train_dataloader,
+# 训练一个epoch
+def train_one_epoch(args, epoch, dataloader,
                     clip_train_dict, td_train_dict,
                     criterion, loss_scaler: NativeScaler()):
     # 状态记录表
@@ -196,7 +200,7 @@ def train_one_epoch(args, epoch, train_dataloader,
     td_train_dict['txt_decoder'].train(True)
     clip_loss = criterion['loss_kl']
     tdm_loss = criterion['loss_ce']
-    for step, (src_input, tgt_input, masked_tgt_input) in enumerate(train_dataloader):
+    for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
         # 刷新梯度
         clip_train_dict['optimizer'].zero_grad()
         # 采用自动混合精度
@@ -263,10 +267,37 @@ def train_one_epoch(args, epoch, train_dataloader,
     return train_stats
 
 
-def evaluate_one_epoch(args, epoch, train_dataloader,
+# 评估一个epoch
+def evaluate_one_epoch(dataloader,
                        clip_train_dict, td_train_dict,
-                       criterion, loss_scaler: NativeScaler()):
-    return ''
+                       criterion):
+    # 状态记录表
+    clip_losses, tdm_losses = [], []
+    # 设置模型为评估模式
+    clip_train_dict['clip_model'].eval()
+    td_train_dict['txt_decoder'].eval()
+
+    with torch.no_grad():
+        for src_input, tgt_input, masked_tgt_input in dataloader:
+            # 采用自动混合精度
+            with torch.cuda.amp.autocast():
+                img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input, tgt_input)
+                loss_i_t = criterion['loss_kl'](img_txt_s_matrix, ground_truth)
+                loss_t_i = criterion['loss_kl'](txt_img_s_matrix, ground_truth)
+                clip_total_loss = (loss_i_t + loss_t_i) / 2.
+                clip_losses.append(clip_total_loss.item())
+
+                tdm_logits = td_train_dict['txt_decoder'](tgt_input, masked_tgt_input,
+                                                          td_train_dict['txt_decoder'].get_txt_encoder())
+                masked_lm_loss = criterion['loss_ce'](tdm_logits.view(-1, tdm_logits.shape[-1]),
+                                                      tgt_input['input_ids'].view(-1)) * args['loss_lambda']
+                tdm_losses.append(masked_lm_loss.item())
+
+    avg_clip_loss = sum(clip_losses) / len(clip_losses) if len(clip_losses) > 0 else 0
+    avg_tdm_loss = sum(tdm_losses) / len(tdm_losses) if len(tdm_losses) > 0 else 0
+
+    eval_stats = {'clip_loss': avg_clip_loss, 'tdm_loss': avg_tdm_loss}
+    return eval_stats
 
 
 if __name__ == '__main__':
