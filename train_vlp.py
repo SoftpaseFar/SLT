@@ -186,7 +186,7 @@ def main(args_, config):
                                       criterion, loss_scaler)
         print(f"Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}")
         # 评估一个epoch
-        val_stats = evaluate_one_epoch(val_dataloader,
+        val_stats = evaluate_one_epoch(epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
         print(f"Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}")

@@ -4,7 +4,6 @@ import numpy as np
 from transformers import MBartForConditionalGeneration, MBartPreTrainedModel, MBartModel, MBartConfig
 from torchvision.models.video import s3d, S3D_Weights
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
-from torchvision.models import ResNet18_Weights
 import torchvision
 from definition import *
 from torch.nn.utils.rnn import pad_sequence
@@ -139,3 +138,11 @@ class CLIP(nn.Module):
                                  requires_grad=False)
 
         return img_txt_s_matrix, txt_img_s_matrix, ground_truth
+
+
+# SLT模型
+class SLT(nn.Module):
+    def __init__(self, args, config, embed_dim=1024, pretrain=None):
+        super(SLT, self).__init__()
+        self.args = args
+        self.config = config
