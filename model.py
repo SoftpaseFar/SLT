@@ -1,15 +1,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from transformers import MBartForConditionalGeneration, MBartPreTrainedModel, MBartModel, MBartConfig
+from transformers import MBartForConditionalGeneration
 from torchvision.models.video import s3d, S3D_Weights
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
-import torchvision
-from definition import *
-from torch.nn.utils.rnn import pad_sequence
-from torch import Tensor
-from transformers import AutoConfig
-from pathlib import Path
 
 
 # CLIP文本编码器
@@ -95,8 +89,11 @@ class TextDecoder(nn.Module):
             config['model']['MBart_ver2']).get_output_embeddings()
         self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
             config['model']['MBart_ver2']).model.shared.num_embeddings)))
+        # 情感层输出
+        self.emo_predict = nn.Linear(2454, 60)
 
-    def forward(self, tgt_input, masked_tgt_input, txt_encoder):
+    # CLIP阶段正向反馈
+    def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
         with torch.no_grad():
             _, encoder_hidden_states = txt_encoder(masked_tgt_input)
 
@@ -114,21 +111,8 @@ class TextDecoder(nn.Module):
 
         return logits
 
-
-# SLT阶段文本解码器
-class SLTTextDecoder(nn.Module):
-    def __init__(self, config):
-        super(SLTTextDecoder, self).__init__()
-        self.txt_decoder = MBartForConditionalGeneration.from_pretrained(
-            config['model']['MBart_ver2']).get_decoder()
-        self.lm_head = MBartForConditionalGeneration.from_pretrained(
-            config['model']['MBart_ver2']).get_output_embeddings()
-        self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
-            config['model']['MBart_ver2']).model.shared.num_embeddings)))
-        # 情感层输出
-        self.emo_predict = nn.Linear(2454, 60)
-
-    def forward(self, tgt_input, encoder_hidden_states):
+    # SLT阶段正向反馈
+    def forward_slt(self, tgt_input, encoder_hidden_states):
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids,
@@ -142,6 +126,16 @@ class SLTTextDecoder(nn.Module):
         vocab_logits = self.lm_head(decoder_out[0]) + self.final_logits_bias
         emo_logits = self.emo_predict(vocab_logits[:, 0, :])
         return vocab_logits, emo_logits
+
+    def forward(self, phase=None, tgt_input=None,
+                masked_tgt_input=None, txt_encoder=None,
+                encoder_hidden_states=None):
+        if phase == 'clip':
+            return self.forward_clip(tgt_input, masked_tgt_input, txt_encoder)
+        elif phase == 'slt':
+            return self.forward_slt(tgt_input, encoder_hidden_states)
+        else:
+            raise ValueError("参数错误")
 
 
 # CLIP模型
@@ -193,7 +187,7 @@ class SLT(nn.Module):
         # 视频编码器
         self.img_encoder = ImageCLIP(planes=1024, frozen=False)
         # 文本解码器
-        self.txt_decoder = SLTTextDecoder(config=config)
+        self.txt_decoder = TextDecoder(config=config)
 
     def forward(self, src_input, tgt_input):
         # print(src_input['input_ids'][0].shape)
@@ -201,5 +195,6 @@ class SLT(nn.Module):
         # 视频编码
         _, encoder_hidden_states = self.img_encoder(src_input)
         # 文本解码
-        vocab_logits, emo_logits = self.txt_decoder(tgt_input, encoder_hidden_states)
+        vocab_logits, emo_logits = self.txt_decoder(phase='slt', tgt_input=tgt_input,
+                                                    encoder_hidden_states=encoder_hidden_states)
         return vocab_logits, emo_logits
