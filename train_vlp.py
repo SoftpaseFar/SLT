@@ -25,11 +25,11 @@ import utils
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=8, type=int)
-    a_parser.add_argument('--epochs', default=10, type=int)
+    a_parser.add_argument('--batch_size', default=3, type=int)
+    a_parser.add_argument('--epochs', default=2, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
-    a_parser.add_argument('--device', default='cuda')
+    a_parser.add_argument('--device', default='cpu')
     # a_parser.add_argument('--device', default='cuda')
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
@@ -137,7 +137,7 @@ def main(args_, config):
     # CLIP
     clip_model = CLIP(config=config)
     clip_model.to(device)
-    # 模型微调 TODO
+
     # 优化器 学习率调度器
     optimizer_clip = create_optimizer(args_, clip_model)
     lr_scheduler_clip, _ = create_scheduler(args_, optimizer_clip)
@@ -267,10 +267,14 @@ def train_one_epoch(args, epoch, dataloader,
         if step % 5 == 0:
             td_train_dict['optimizer'].zero_grad()
             with torch.cuda.amp.autocast():
-                tdm_logits = td_train_dict['txt_decoder'](tgt_input, masked_tgt_input,
-                                                          td_train_dict['txt_decoder'].get_txt_encoder())
-                masked_lm_loss = tdm_loss(tdm_logits.view(-1, tdm_logits.shape[-1]),
-                                          tgt_input['input_ids'].view(-1)) * args['loss_lambda']
+                tdm_logits, emo_logits = td_train_dict['txt_decoder'](tgt_input, masked_tgt_input,
+                                                                      td_train_dict['txt_decoder'].get_txt_encoder())
+                vocab_masked_lm_loss = tdm_loss(tdm_logits[:, 1:, :].view(-1, tdm_logits.shape[-1]),
+                                                tgt_input['input_ids'][:, 1:, :].view(-1)) * args['loss_lambda']
+                emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0, :].view(-1)) * args[
+                    'loss_lambda']
+
+                masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
                 # 根据梯度模型参数
                 loss_scaler.scale(masked_lm_loss).backward()
                 loss_scaler.step(td_train_dict['optimizer'])
@@ -289,7 +293,7 @@ def train_one_epoch(args, epoch, dataloader,
     clip_train_dict['lr_scheduler'].step()
     td_train_dict['lr_scheduler'].step()
 
-    avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, clip_losses)
+    avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
 
     # 用于返回的状态字典
     train_stats = {'clip_loss': avg_clip_loss,
@@ -344,8 +348,8 @@ if __name__ == '__main__':
         config = yaml.load(f, Loader=yaml.FullLoader)
 
     # 创建输出文件夹
-    if args.output_dir:
-        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    if args.checkpoints_dir:
+        Path(args.checkpoints_dir).mkdir(parents=True, exist_ok=True)
 
     # 开始训练
     main(args, config)

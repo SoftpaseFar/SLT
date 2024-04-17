@@ -8,6 +8,8 @@ import torchvision
 from definition import *
 from torch.nn.utils.rnn import pad_sequence
 from torch import Tensor
+from transformers import AutoConfig
+from pathlib import Path
 
 
 # CLIP文本编码器
@@ -25,8 +27,9 @@ class TextCLIP(nn.Module):
         logits = self.txt_encoder(input_ids=tgt_input['input_ids'],
                                   attention_mask=tgt_input['attention_mask'])[0]
         # 获取句子编码
-        output = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
-        return self.lm_head(output), logits
+        sentence = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
+        # emotion = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
+        return self.lm_head(sentence), logits
 
 
 # CLIP图像编码器
@@ -50,11 +53,13 @@ class ImageCLIP(nn.Module):
         input_ids, src_length_batch = src_input['input_ids'], src_input['src_length_batch']
 
         # 构建S3D的输入格式
-        N = len(src_input)
+        N = len(src_input['input_ids'])
         T = src_length_batch
         C, H, W = input_ids[0][0].size()
 
         src = torch.zeros(N, C, T, H, W)
+        # print(src.shape)
+        # print(src_input['attention_mask'])
 
         # 填充数据到s3d_input
         for i, video in enumerate(input_ids):
@@ -62,13 +67,25 @@ class ImageCLIP(nn.Module):
                 src[i, :, j, :, :] = frame
 
         # 获取每个视频的表示，，模型推导
-        src = self.S3D(src)
-        output = self.fc(src)
+        src = self.S3D.features(src)
+        src = self.S3D.avgpool(src)
 
-        return output
+        src = self.S3D.classifier(src)
+        logits = torch.mean(src, dim=(3, 4))
+        logits = logits.permute(0, 2, 1)
+        src = torch.mean(src, dim=(2, 3, 4))
+
+        # print(src_length_batch)
+        # print(logits.shape)
+        # logits = None
+        # src = self.S3D(src)
+        head = self.fc(src)
+        # print(head.shape)
+
+        return head, logits
 
 
-# 文本解码器
+# VLP阶段文本解码器
 class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
@@ -98,6 +115,35 @@ class TextDecoder(nn.Module):
         return logits
 
 
+# SLT阶段文本解码器
+class SLTTextDecoder(nn.Module):
+    def __init__(self, config):
+        super(SLTTextDecoder, self).__init__()
+        self.txt_decoder = MBartForConditionalGeneration.from_pretrained(
+            config['model']['MBart_ver2']).get_decoder()
+        self.lm_head = MBartForConditionalGeneration.from_pretrained(
+            config['model']['MBart_ver2']).get_output_embeddings()
+        self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
+            config['model']['MBart_ver2']).model.shared.num_embeddings)))
+        # 情感层输出
+        self.emo_predict = nn.Linear(2454, 60)
+
+    def forward(self, tgt_input, encoder_hidden_states):
+        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
+        decoder_out = self.txt_decoder(
+            input_ids=decoder_input_ids,
+            attention_mask=tgt_input['attention_mask'],
+
+            encoder_hidden_states=encoder_hidden_states,
+            # encoder_attention_mask=encoder_attention_mask,
+
+            return_dict=True,
+        )
+        vocab_logits = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        emo_logits = self.emo_predict(vocab_logits[:, 0, :])
+        return vocab_logits, emo_logits
+
+
 # CLIP模型
 class CLIP(nn.Module):
     def __init__(self, config):
@@ -119,7 +165,7 @@ class CLIP(nn.Module):
         return self.encoder_hidden_states
 
     def forward(self, src_input, tgt_input):
-        img_features = self.img_encoder(src_input)
+        img_features, _ = self.img_encoder(src_input)
         txt_features, self.encoder_hidden_states = self.txt_encoder(tgt_input)
 
         # 特征信息归一化
@@ -142,7 +188,18 @@ class CLIP(nn.Module):
 
 # SLT模型
 class SLT(nn.Module):
-    def __init__(self, args, config, embed_dim=1024, pretrain=None):
+    def __init__(self, config):
         super(SLT, self).__init__()
-        self.args = args
-        self.config = config
+        # 视频编码器
+        self.img_encoder = ImageCLIP(planes=1024, frozen=False)
+        # 文本解码器
+        self.txt_decoder = SLTTextDecoder(config=config)
+
+    def forward(self, src_input, tgt_input):
+        # print(src_input['input_ids'][0].shape)
+        # print(tgt_input['input_ids'].shape)
+        # 视频编码
+        _, encoder_hidden_states = self.img_encoder(src_input)
+        # 文本解码
+        vocab_logits, emo_logits = self.txt_decoder(tgt_input, encoder_hidden_states)
+        return vocab_logits, emo_logits

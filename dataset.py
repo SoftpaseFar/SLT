@@ -6,6 +6,8 @@ import random
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+from definition import *
+from torch.nn.utils.rnn import pad_sequence
 
 
 class How2SignDataset(Dataset):
@@ -72,17 +74,24 @@ class How2SignDataset(Dataset):
         return imgs
 
     def collate_fn(self, batch):
-        name_batch, imgs_batch_tmp, tgt_batch, src_length_batch, = [], [], [], []
+        name_batch, imgs_batch_tmp, emo_batch_tmp, tgt_batch, src_length_batch, = [], [], [], [], []
 
         # 将批序列的name、imgs、tgt分别包装成列表
         for name_sample, imgs_sample, tgt_sample in batch:
             name_batch.append(name_sample)
             imgs_batch_tmp.append(imgs_sample)
+            # tgt_sample 加入情感占位符
+            tgt_sample = '<pad>' + tgt_sample
+            # 一个batch情感收集
+            emo_batch_tmp.append('excited')
             tgt_batch.append(tgt_sample)
 
+        # 每个视频真实长度
+        imgs_batch_len = [len(vid) for vid in imgs_batch_tmp]
+        # print(imgs_batch_len)
+
         # 视频批序列最大长度
-        imgs_batch_max_len = max([len(vid) for vid in imgs_batch_tmp])
-        # 每个视频帧填充成4的倍数 + 左右填充后的长度
+        imgs_batch_max_len = max(imgs_batch_len)
 
         # 将batch每个video的imgs序列填充成长度为imgs_batch_max_len
         imgs_batch = [torch.cat(
@@ -92,6 +101,16 @@ class How2SignDataset(Dataset):
             )
             , dim=0)
             for vid in imgs_batch_tmp]
+        # # 计算S3D操作后的视频掩码 TODO 考虑掩码
+        # s3d_after_length = ((torch.tensor(imgs_batch_len) / 2 - 3) / 2 + 1 - 2) / 2 + 1 - 1
+        # s3d_after_length = s3d_after_length.long()
+        # print(s3d_after_length)
+        # mask_gen = []
+        # for i in s3d_after_length:
+        #     tmp = torch.ones([i]) + 7
+        #     mask_gen.append(tmp)
+        # mask_gen = pad_sequence(mask_gen, padding_value=PAD_IDX, batch_first=True)
+        # img_padding_mask = (mask_gen != PAD_IDX).long()
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
@@ -106,6 +125,8 @@ class How2SignDataset(Dataset):
             'name_batch': name_batch,
 
             'input_ids': imgs_batch,
+            # 'attention_mask': img_padding_mask,
+
             'src_length_batch': imgs_batch_max_len}
 
         # 训练阶段需要mask掉一些，用来训练解码器
@@ -120,6 +141,13 @@ class How2SignDataset(Dataset):
                                                   truncation=True)
             return src_input, tgt_input, masked_tgt_input
 
+        print(tgt_input['input_ids'].shape)
+
+        # 情感pad初进行情感注入
+        for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
+            tgt_input['input_ids'][i, 0] = value
+
+        print(tgt_input['input_ids'])
         # 返回一个batch视频集合 目标翻译的文本
         return src_input, tgt_input
 

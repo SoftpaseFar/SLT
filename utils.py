@@ -153,6 +153,81 @@ def save_checkpoint(state, args, filename):
         print(f"保存失败，错误：{e}")
 
 
+# ------
+# 情感tokenizer
+def tokenizer(words):
+    emo_vocab = {
+        # 正面情绪
+        "happy": 1,
+        "joy": 2,
+        "excited": 3,
+        "elated": 4,
+        "thrilled": 5,
+        "delighted": 6,
+        "pleased": 7,
+        "content": 8,
+        "satisfied": 9,
+        "proud": 10,
+        "optimistic": 11,
+        "hopeful": 12,
+        "grateful": 13,
+        "inspired": 14,
+        "cheerful": 15,
+        "blissful": 16,
+        "euphoric": 17,
+
+        # 负面情绪
+        "sad": 18,
+        "angry": 19,
+        "fear": 20,
+        "disappointed": 21,
+        "frustrated": 22,
+        "hurt": 23,
+        "depressed": 24,
+        "anxious": 25,
+        "lonely": 26,
+        "miserable": 27,
+        "gloomy": 28,
+        "hopeless": 29,
+        "overwhelmed": 30,
+        "embarrassed": 31,
+        "jealous": 32,
+        "dismayed": 33,
+        "disgusted": 34,
+
+        # 中性/复杂情绪
+        "love": 35,
+        "hate": 36,
+        "indifferent": 37,
+        "curious": 38,
+        "surprised": 39,
+        "bored": 40,
+        "confused": 41,
+        "amused": 42,
+        "calm": 43,
+        "relaxed": 44,
+        "sympathetic": 45,
+        "nervous": 46,
+        "alarmed": 47,
+        "apathetic": 48,
+        "inquisitive": 49,
+        "astonished": 50,
+
+        # 情感不明确或无情感
+        "neutral": 51,
+        "uncertain": 52,
+        "ambiguous": 53,
+        "mixed": 54,
+        "varying": 55,
+        "complex": 56,
+        "subtle": 57,
+        "unclassified": 58,
+        "noncommittal": 59,
+        "undetermined": 60
+    }
+    return [emo_vocab.get(word, 0) for word in words]
+
+
 if __name__ == '__main__':
     # res = load_dataset_cvs('./data/How2Sign/test.csv')
     res = load_dataset_cvs('./data/How2Sign/test.csv')
