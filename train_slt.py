@@ -1,6 +1,3 @@
-from transformers import AutoTokenizer
-tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
-
 import os
 import math
 import sys
