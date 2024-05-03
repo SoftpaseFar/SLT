@@ -1,3 +1,6 @@
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+
 import os
 import math
 import sys
@@ -88,7 +91,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25", vocab_size=2454)
 
     # 加载训练数据集
     # 训练数据集
