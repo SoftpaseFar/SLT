@@ -312,6 +312,8 @@ def evaluate_one_epoch(args, epoch,
 if __name__ == '__main__':
     # 禁用分词器的并行处理
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    # 设置 Hugging Face 模型中心镜像源的地址
+    os.environ["HF_HOME"] = "https://mirrors.tuna.tsinghua.edu.cn/hugging-face-models/"
 
     # 加载参数
     parser = argparse.ArgumentParser('VLP scripts', parents=[get_args_parser()])
