@@ -11,8 +11,7 @@ class TextCLIP(nn.Module):
     def __init__(self, config=None):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
-        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25",
-                                                                         vocab_size=2454).get_encoder()
+        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25").get_encoder()
 
         # 设置输出头维度
         self.lm_head = nn.Identity()
@@ -91,7 +90,7 @@ class TextDecoder(nn.Module):
         self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
             "facebook/mbart-large-cc25", vocab_size=2454).model.shared.num_embeddings)))
         # 情感层输出
-        self.emo_predict = nn.Linear(2454, 60)
+        self.emo_predict = nn.Linear(250027, 60)
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
