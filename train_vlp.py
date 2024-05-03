@@ -3,13 +3,13 @@ import math
 import sys
 import torch
 import yaml
+import random
+import loss
+import utils
 import argparse
+import numpy as np
 from pathlib import Path
 from transformers import MBartTokenizer
-import numpy as np
-import random
-
-import loss
 from model import CLIP, TextDecoder
 from dataset import How2SignDataset
 from torch.utils.data import DataLoader
@@ -20,7 +20,6 @@ from timm.optim import AdamW
 from timm.utils import NativeScaler
 from loss import KLLoss
 from definition import *
-import utils
 
 
 def get_args_parser():
@@ -89,7 +88,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained(config['model']['tokenizer'])
+    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25", vocab_size=2454)
 
     # 加载训练数据集
     # 训练数据集
@@ -215,7 +214,7 @@ def main(args_, config):
                     'train_stats': train_stats,
                     'val_stats': val_stats,
                     'best_loss': val_loss
-                }, args=args, filename=f"checkpoint_{epoch + 1}.pth.tar")
+                }, args=args, filename=f"vlp_checkpoint_{epoch + 1}.pth.tar")
 
         else:
             patience_counter += 1
@@ -272,7 +271,7 @@ def train_one_epoch(args, epoch, dataloader,
                                                                       masked_tgt_input=masked_tgt_input,
                                                                       txt_encoder=td_train_dict[
                                                                           'txt_decoder'].get_txt_encoder())
-                vocab_masked_lm_loss = tdm_loss(tdm_logits[:, 1:, :].view(-1, tdm_logits.shape[-1]),
+                vocab_masked_lm_loss = tdm_loss(tdm_logits.view(-1, tdm_logits.shape[-1]),
                                                 tgt_input['input_ids'][:, 1:, :].view(-1)) * args['loss_lambda']
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0, :].view(-1)) * args[
                     'loss_lambda']

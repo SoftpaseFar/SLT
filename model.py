@@ -11,7 +11,8 @@ class TextCLIP(nn.Module):
     def __init__(self, config=None):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
-        self.txt_encoder = MBartForConditionalGeneration.from_pretrained(config['model']['MBart_ver1']).get_encoder()
+        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25",
+                                                                         vocab_size=2454).get_encoder()
 
         # 设置输出头维度
         self.lm_head = nn.Identity()
@@ -84,14 +85,13 @@ class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
         self.txt_decoder = MBartForConditionalGeneration.from_pretrained(
-            "facebook/mbart-large-cc25").get_decoder()
+            "facebook/mbart-large-cc25", vocab_size=2454).get_decoder()
         self.lm_head = MBartForConditionalGeneration.from_pretrained(
-            "facebook/mbart-large-cc25").get_output_embeddings()
-        print("hello:", self.lm_head.weight.shape[1])
-        # self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
-        #     "facebook/mbart-large-cc25").model.shared.num_embeddings)))
+            "facebook/mbart-large-cc25", vocab_size=2454).get_output_embeddings()
+        self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
+            "facebook/mbart-large-cc25", vocab_size=2454).model.shared.num_embeddings)))
         # 情感层输出
-        # self.emo_predict = nn.Linear(2454, 60)
+        self.emo_predict = nn.Linear(2454, 60)
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
@@ -108,9 +108,10 @@ class TextDecoder(nn.Module):
 
             return_dict=True,
         )
-        logits = self.lm_head(decoder_out[0]) + self.final_logits_bias
-
-        return logits
+        vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        vocab_logits = vocab_logits_tmp[:, 1:, :]
+        emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
+        return vocab_logits, emo_logits
 
     # SLT阶段正向反馈
     def forward_slt(self, tgt_input, encoder_hidden_states):
@@ -124,13 +125,10 @@ class TextDecoder(nn.Module):
 
             return_dict=True,
         )
-        # print(decoder_out)
-        # vocab_logits = self.lm_head(decoder_out[0]) + self.final_logits_bias
-        print(decoder_out[0].shape)
-        vocab_logits = self.lm_head(decoder_out[0])
-        print("vocab_logits.shape:", vocab_logits[:, 1:, :].shape)
-        # emo_logits = self.emo_predict(vocab_logits[:, 0, :])
-        emo_logits = vocab_logits
+
+        vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        vocab_logits = vocab_logits_tmp[:, 1:, :]
+        emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
 
     def forward(self, phase=None, tgt_input=None,

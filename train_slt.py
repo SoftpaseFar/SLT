@@ -8,28 +8,21 @@ from pathlib import Path
 from transformers import MBartTokenizer
 import numpy as np
 import random
-import torch.nn.functional as F
-
-import loss
 from model import SLT
 from dataset import How2SignDataset
 from torch.utils.data import DataLoader
 from torch.optim import lr_scheduler as scheduler
 from timm.optim import create_optimizer
-from timm.scheduler import create_scheduler
-from timm.optim import AdamW
 from timm.utils import NativeScaler
-from loss import KLLoss
 from definition import *
 import utils
-from timm.data import Mixup
 from sacrebleu.metrics import BLEU
 
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=2, type=int)
-    a_parser.add_argument('--epochs', default=2, type=int)
+    a_parser.add_argument('--batch_size', default=3, type=int)
+    a_parser.add_argument('--epochs', default=6, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cpu')
@@ -95,7 +88,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25", vocab_size=2454)
 
     # 加载训练数据集
     # 训练数据集
@@ -142,10 +135,9 @@ def main(args_, config):
 
     # model
 
-    # 模型微调,参数加载
+    # 模型微调,参数加载 TODO
     if args['finetune']:
         pass
-        # TODO
 
     # SLT
     slt_model = SLT(config=config)
@@ -170,58 +162,15 @@ def main(args_, config):
 
     # 数据增强 TODO
 
-    # 评估模式
+    # 评估模式 TODO
     if args['eval']:
         pass
 
     # 开始训练
     print(f"开始训练，共训练 {args['epochs']} 轮.")
 
-    train_batch = [train_data[i] for i in range(args['batch_size'])]  # 获取一个batch的数据
-    src_input, tgt_input = train_data.collate_fn(train_batch)  # 调用collate_fn函数
-    # vocab_logits, emo_logits = slt_model(src_input, tgt_input)
-    vocab_logits, emo_logits = slt_model(src_input, tgt_input)
-    print("tgt_input['input_ids']:", tgt_input['input_ids'][:, 1:])
-    print("vocab_logits.shape:", vocab_logits.shape)
-    # x = torch.argmax(vocab_logits[:, 1:, :], dim=-1)
-    # print("x:", x)
-    # x = torch.tensor([[2673, 38, 2, 250004]])
-    tgt_pres = tokenizer.batch_decode(torch.argmax(vocab_logits[:, 1:, :], dim=-1),
-                                      skip_special_tokens=True)
-    tgt_refs = tokenizer.batch_decode(tgt_input['input_ids'][:, 1:],
-                                      skip_special_tokens=True)
-
-    print(tgt_refs)
-    tgt_pres = ['Hi!',
-                'The aileron is the control surface in the wing that is controlled by lateral movement right and left of the stick.']
-    print(tgt_pres)
-    res = []
-    res.extend(tgt_pres)
-    res.extend(tgt_pres)
-    print(res)
-
-    bleu = BLEU()
-    bleu_s = bleu.corpus_score(tgt_pres, tgt_refs)
-    print('bleu_s:', bleu_s)
-    # print("Special tokens:", tokenizer.special_tokens_map)
-
-    # # 使用softmax函数将logits转换为概率分布
-    # probabilities = F.softmax(vocab_logits, dim=-1)
-    #
-    # # 选择概率最高的标签作为预测结果
-    # predicted_labels = torch.argmax(probabilities, dim=-1)
-    # print(predicted_labels)
-
-    # 使用 tokenizer 解码每个样本
-    # decoded_texts = []
-    # for logits in vocab_logits:
-    #     decoded_text = tokenizer.decode(torch.argmax(logits, dim=-1), skip_special_tokens=True)
-    #     decoded_texts.append(decoded_text)
-    # print(decoded_texts)
-    # decoded_texts = tokenizer.batch_decode(torch.argmax(vocab_logits, dim=-1), skip_special_tokens=True)
-
-    # print(decoded_texts)
-    # max_accuracy = 0.0
+    # 优化指标
+    max_accuracy = 0.0
 
     for epoch in range(args['epochs']):
         # 训练一个epoch
@@ -229,7 +178,7 @@ def main(args_, config):
                                       train_dataloader,
                                       slt_train_dict,
                                       criterion, loss_scaler)
-        print(f"Training - Epoch: {epoch}, Vocab Emo Loss: {train_stats['vocab_emo_loss']}")
+        print(f"Training - Epoch: {epoch + 1}, Vocab Emo Loss: {train_stats['vocab_emo_loss']}")
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -237,6 +186,28 @@ def main(args_, config):
                                        slt_train_dict,
                                        criterion,
                                        tokenizer)
+        print(f"Evaluation - Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}")
+
+        if max_accuracy < val_stats["bleu_s"]:
+            max_accuracy = val_stats["bleu_s"]
+            # 保存模型
+            if args['save_model'] and epoch % args['save_interval'] == 0:
+                utils.save_checkpoint(state={
+                    'epoch': epoch + 1,
+                    'slt_train_dict': dict(
+                        optimizer=slt_train_dict['optimizer'].state_dict(),
+                        lr_scheduler=slt_train_dict['lr_scheduler'].state_dict(),
+                        slt_model=slt_train_dict['slt_model'].state_dict()
+                    ),
+                    'train_stats': train_stats,
+                    'val_stats': val_stats,
+                    'max_accuracy': max_accuracy
+                }, args=args, filename=f"slt_checkpoint_{epoch + 1}.pth.tar")
+
+        print(f'当前最优 Blue-4分数: {max_accuracy:.2f}%')
+
+        # 其他逻辑 TODO
+        print("其他逻辑...")
 
 
 # 训练一个epoch
@@ -255,7 +226,7 @@ def train_one_epoch(args, epoch,
         print(f"Epoch {epoch + 1} train, Step {step}...")
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
-        vocab_masked_lm_loss = criterion(vocab_logits[:, 1:, :].view(-1, vocab_logits.shape[-1]),
+        vocab_masked_lm_loss = criterion(vocab_logits.view(-1, vocab_logits.shape[-1]),
                                          tgt_input['input_ids'][:, 1:, :].view(-1)) * args['loss_lambda']
         emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0, :].view(-1)) * args[
             'loss_lambda']
