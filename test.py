@@ -1,6 +1,7 @@
 import gzip
 import pickle
 import torch
+import mediapipe as mp
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 from definition import *
@@ -40,6 +41,34 @@ def get_first_frame_dimensions(video_path):
     cap.release()
 
 
+def extract_keypoints_from_video(video_path):
+    # 初始化MediaPipe Pose模块
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+
+    # 打开视频文件
+    cap = cv2.VideoCapture(video_path)
+    # 存储所有帧的关键点
+    keypoints_all_frames = []
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        # 将BGR图像转换为RGB
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # 处理图像并提取姿态关键点
+        results = pose.process(image)
+        keypoints_all_frames.append(results)
+        # 收集关键点
+        # if results.pose_landmarks:
+        #     keypoints = [(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark]
+        #     keypoints_all_frames.append(keypoints)
+    cap.release()
+
+    return keypoints_all_frames
+
+
 if __name__ == '__main__':
     # 调用函数
     # get_first_frame_dimensions('./data/How2Sign/videos/-g0sqksgyc4_3-2-rgb_front.mp4')
@@ -66,12 +95,15 @@ if __name__ == '__main__':
     # x = x.view(x.size(0), -1)
     # print(x)
 
-    tgt_input = {
-        'input_ids': torch.tensor([[1, 2, 3], [4, 5, 6]]),  # 示例的input_ids
-        'attention_mask': torch.tensor([[1, 1, 1], [1, 1, 1]])  # 示例的attention_mask
-    }
-    txt_logits = torch.randn(2, 3, 10)
-    print(txt_logits)
-    output = txt_logits[:, [2, 2]]
-    print(output)
+    # tgt_input = {
+    #     'input_ids': torch.tensor([[1, 2, 3], [4, 5, 6]]),  # 示例的input_ids
+    #     'attention_mask': torch.tensor([[1, 1, 1], [1, 1, 1]])  # 示例的attention_mask
+    # }
+    # txt_logits = torch.randn(2, 3, 10)
+    # print(txt_logits)
+    # output = txt_logits[:, [2, 2]]
+    # print(output)
+
+    res = extract_keypoints_from_video('./data/How2Sign/videos/-g0sqksgyc4_3-2-rgb_front.mp4')
+    print(res[0])
     pass

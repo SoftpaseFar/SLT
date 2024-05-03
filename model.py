@@ -84,13 +84,14 @@ class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
         self.txt_decoder = MBartForConditionalGeneration.from_pretrained(
-            config['model']['MBart_ver2']).get_decoder()
+            "facebook/mbart-large-cc25").get_decoder()
         self.lm_head = MBartForConditionalGeneration.from_pretrained(
-            config['model']['MBart_ver2']).get_output_embeddings()
-        self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
-            config['model']['MBart_ver2']).model.shared.num_embeddings)))
+            "facebook/mbart-large-cc25").get_output_embeddings()
+        print("hello:", self.lm_head.weight.shape[1])
+        # self.register_buffer("final_logits_bias", torch.zeros((1, MBartForConditionalGeneration.from_pretrained(
+        #     "facebook/mbart-large-cc25").model.shared.num_embeddings)))
         # 情感层输出
-        self.emo_predict = nn.Linear(2454, 60)
+        # self.emo_predict = nn.Linear(2454, 60)
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
@@ -123,8 +124,13 @@ class TextDecoder(nn.Module):
 
             return_dict=True,
         )
-        vocab_logits = self.lm_head(decoder_out[0]) + self.final_logits_bias
-        emo_logits = self.emo_predict(vocab_logits[:, 0, :])
+        # print(decoder_out)
+        # vocab_logits = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        print(decoder_out[0].shape)
+        vocab_logits = self.lm_head(decoder_out[0])
+        print("vocab_logits.shape:", vocab_logits[:, 1:, :].shape)
+        # emo_logits = self.emo_predict(vocab_logits[:, 0, :])
+        emo_logits = vocab_logits
         return vocab_logits, emo_logits
 
     def forward(self, phase=None, tgt_input=None,
@@ -136,6 +142,31 @@ class TextDecoder(nn.Module):
             return self.forward_slt(tgt_input, encoder_hidden_states)
         else:
             raise ValueError("参数错误")
+
+    # generate方法待修订
+    def generate(self, tokenizer, encoder_hidden_states, max_length=200):
+        # 初始化解码器的输入，通常是一个特殊的起始 token
+        input_ids = torch.tensor([[tokenizer.bos_token_id]])
+        # 生成输出序列
+        for _ in range(max_length):
+            decoder_out = self.txt_decoder(
+                input_ids=input_ids,
+
+                encoder_hidden_states=encoder_hidden_states,
+                # encoder_attention_mask=encoder_attention_mask,
+
+                return_dict=True,
+            )
+
+            logits = self.lm_head(decoder_out[0])
+            next_token_id = torch.argmax(logits[:, -1, :], dim=-1)
+            input_ids = torch.cat([input_ids, next_token_id.unsqueeze(0)], dim=-1)
+            if next_token_id == tokenizer.eos_token_id:
+                break
+        generated_sequence = input_ids
+        sequence = tokenizer.batch_decode(generated_sequence[:, 1:],
+                                          skip_special_tokens=True)
+        return sequence
 
 
 # CLIP模型
@@ -198,3 +229,10 @@ class SLT(nn.Module):
         vocab_logits, emo_logits = self.txt_decoder(phase='slt', tgt_input=tgt_input,
                                                     encoder_hidden_states=encoder_hidden_states)
         return vocab_logits, emo_logits
+
+    # generate方法待修订
+    def generate(self, src_input, tokenizer):
+        _, encoder_hidden_states = self.img_encoder(src_input)
+        sequence = self.txt_decoder.generate(tokenizer, encoder_hidden_states=encoder_hidden_states,
+                                             max_length=200)
+        return sequence

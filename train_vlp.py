@@ -171,7 +171,7 @@ def main(args_, config):
     )
     loss_scaler = NativeScaler()
 
-    # 训练
+    # 开始训练
     print(f"开始训练，共训练 {args['epochs']} 轮.")
 
     # 初始化损失值和早停计数器
@@ -243,6 +243,7 @@ def train_one_epoch(args, epoch, dataloader,
     # 开启训练模式
     clip_train_dict['clip_model'].train(True)
     td_train_dict['txt_decoder'].train(True)
+
     clip_loss = criterion['loss_kl']
     tdm_loss = criterion['loss_ce']
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):

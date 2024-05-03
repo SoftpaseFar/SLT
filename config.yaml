@@ -8,7 +8,7 @@ data:
 
 # 模型参数
 model:
-  tokenizer: ./pretrain_models/MBart_ver1
+  tokenizer: facebook/mbart-large-cc25
   MBart_ver1: ./pretrain_models/MBart_ver1
   MBart_ver2: ./pretrain_models/MBart_ver2
 
