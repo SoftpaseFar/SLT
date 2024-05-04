@@ -84,12 +84,12 @@ class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
         self.MBart = MBartForConditionalGeneration.from_pretrained(
-            "facebook/mbart-large-cc25", vocab_size=2454)
+            "facebook/mbart-large-cc25")
         self.txt_decoder = self.MBart.get_decoder()
         self.lm_head = self.MBart.get_output_embeddings()
         self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
         # 情感层输出
-        self.emo_predict = nn.Linear(2454, 60)
+        self.emo_predict = nn.Linear(250027, 60)
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
