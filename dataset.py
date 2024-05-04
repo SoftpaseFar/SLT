@@ -158,7 +158,7 @@ class How2SignDataset(Dataset):
         #     'input_ids': tgt_input_ids,
         #     'attention_mask': tgt_input_attention_mask
         # }
-        print(tgt_input)
+        print(batch)
 
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:
