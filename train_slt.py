@@ -224,6 +224,8 @@ def train_one_epoch(args, epoch,
 
     for step, (src_input, tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step}...")
+        src_input.to(args['device'])
+        tgt_input.to(args['device'])
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
         vocab_masked_lm_loss = criterion(vocab_logits.view(-1, vocab_logits.shape[-1]),
@@ -273,9 +275,10 @@ def evaluate_one_epoch(args, epoch,
         total_loss = 0.0
 
         for step, (src_input, tgt_input) in enumerate(dataloader):
+            src_input.to(args['device'])
+            tgt_input.to(args['device'])
             print(f"Epoch {epoch + 1} val, Step {step}...")
             # 计算损失
-
             vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
             vocab_masked_lm_loss = criterion(vocab_logits[:, 1:, :].view(-1, vocab_logits.shape[-1]),
