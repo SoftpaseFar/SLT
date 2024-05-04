@@ -43,8 +43,9 @@ class ImageCLIP(nn.Module):
         # 对接线性层，充当head
         self.fc = nn.Linear(1024, planes)
 
-    def forward(self, src_input):
-        input_ids, src_length_batch = src_input['input_ids'], src_input['src_length_batch']
+    def forward(self, args, src_input):
+        input_ids, src_length_batch = src_input['input_ids'].to(args['device']), src_input['src_length_batch'].to(
+            args['device'])
 
         # 构建S3D的输入格式
         N = len(src_input['input_ids'])
@@ -112,8 +113,9 @@ class TextDecoder(nn.Module):
         return vocab_logits, emo_logits
 
     # SLT阶段正向反馈
-    def forward_slt(self, tgt_input, encoder_hidden_states):
-        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
+    def forward_slt(self, args, tgt_input, encoder_hidden_states):
+        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'].to(args['device']),
+                                               self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids,
             attention_mask=tgt_input['attention_mask'],
@@ -129,13 +131,13 @@ class TextDecoder(nn.Module):
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
 
-    def forward(self, phase=None, tgt_input=None,
+    def forward(self, args, phase=None, tgt_input=None,
                 masked_tgt_input=None, txt_encoder=None,
                 encoder_hidden_states=None):
         if phase == 'clip':
             return self.forward_clip(tgt_input, masked_tgt_input, txt_encoder)
         elif phase == 'slt':
-            return self.forward_slt(tgt_input, encoder_hidden_states)
+            return self.forward_slt(args, tgt_input, encoder_hidden_states)
         else:
             raise ValueError("参数错误")
 
@@ -216,13 +218,13 @@ class SLT(nn.Module):
         # 文本解码器
         self.txt_decoder = TextDecoder(config=config)
 
-    def forward(self, src_input, tgt_input):
+    def forward(self, args, src_input, tgt_input):
         # print(src_input['input_ids'][0].shape)
         # print(tgt_input['input_ids'].shape)
         # 视频编码
-        _, encoder_hidden_states = self.img_encoder(src_input)
+        _, encoder_hidden_states = self.img_encoder(args, src_input)
         # 文本解码
-        vocab_logits, emo_logits = self.txt_decoder(phase='slt', tgt_input=tgt_input,
+        vocab_logits, emo_logits = self.txt_decoder(args, phase='slt', tgt_input=tgt_input,
                                                     encoder_hidden_states=encoder_hidden_states)
         return vocab_logits, emo_logits
 
