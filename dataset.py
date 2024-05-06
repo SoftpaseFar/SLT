@@ -22,8 +22,6 @@ class How2SignDataset(Dataset):
         self.videos_dir = config['data']['videos_dir']
         self.max_length = config['data']['max_length']
 
-        self.curr_batch_idx = 0
-
     def __len__(self):
         return len(self.raw_data)
 
@@ -160,8 +158,8 @@ class How2SignDataset(Dataset):
         #     'input_ids': tgt_input_ids,
         #     'attention_mask': tgt_input_attention_mask
         # }
-        self.curr_batch_idx += 1
-        print(f"加载第 {self.curr_batch_idx} batch")
+
+        print(f"正在加载数据集...")
 
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:

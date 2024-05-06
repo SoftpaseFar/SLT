@@ -141,7 +141,7 @@ def main(args_, config):
 
     # SLT
     slt_model = SLT(config=config)
-    slt_model.to(device)
+    # slt_model.to(device)
 
     # 优化器 学习率调度器
     optimizer = create_optimizer(args_, slt_model)
@@ -224,7 +224,7 @@ def train_one_epoch(args, epoch,
 
     for step, (src_input, tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step}...")
-        vocab_logits, emo_logits = slt_train_dict['slt_model'](args, src_input, tgt_input)
+        vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
         vocab_masked_lm_loss = criterion(vocab_logits.view(-1, vocab_logits.shape[-1]),
                                          tgt_input['input_ids'][:, 1:, :].view(-1)) * args['loss_lambda']
