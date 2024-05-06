@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class KLLoss(nn.Module):
-    def __init__(self, error_metric=torch.nn.KLDivLoss(reduction='mean')):
+    def __init__(self, error_metric=torch.nn.KLDivLoss(reduction='batchmean')):
         super(KLLoss, self).__init__()
         self.error_metric = error_metric
 
