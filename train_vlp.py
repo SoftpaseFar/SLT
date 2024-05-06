@@ -20,12 +20,14 @@ from timm.optim import AdamW
 from timm.utils import NativeScaler
 from loss import KLLoss
 from definition import *
+import multiprocessing
+from colorama import init, Back
 
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=3, type=int)
-    a_parser.add_argument('--epochs', default=6, type=int)
+    a_parser.add_argument('--batch_size', default=2, type=int)
+    a_parser.add_argument('--epochs', default=2, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cpu')
@@ -88,7 +90,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25", vocab_size=2454)
+    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
 
     # 加载训练数据集
     # 训练数据集
@@ -133,7 +135,7 @@ def main(args_, config):
                                  pin_memory=args['pin_mem'],
                                  drop_last=True)
 
-    # CLIP
+    # CLIP Model
     clip_model = CLIP(config=config)
     clip_model.to(device)
 
@@ -171,7 +173,7 @@ def main(args_, config):
     loss_scaler = NativeScaler()
 
     # 开始训练
-    print(f"开始训练，共训练 {args['epochs']} 轮.")
+    print(f"开始训练，共训练{Back.GREEN} {args['epochs']} {Back.RESET}轮.")
 
     # 初始化损失值和早停计数器
     min_loss = np.inf
@@ -342,6 +344,12 @@ def evaluate_one_epoch(epoch, dataloader,
 if __name__ == '__main__':
     # 禁用分词器的并行处理
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+    # 设置进程启动方法为 'spawn'
+    multiprocessing.set_start_method('spawn', force=True)
+
+    # 初始化 colorama
+    init()
 
     # 加载参数
     parser = argparse.ArgumentParser('VLP scripts', parents=[get_args_parser()])

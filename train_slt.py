@@ -18,7 +18,7 @@ from definition import *
 import utils
 from sacrebleu.metrics import BLEU
 import multiprocessing
-from colorama import init,  Back
+from colorama import init, Back
 
 
 def get_args_parser():
@@ -136,13 +136,11 @@ def main(args_, config):
                                  pin_memory=args['pin_mem'],
                                  drop_last=True)
 
-    # model
-
     # 模型微调,参数加载 TODO
     if args['finetune']:
         pass
 
-    # SLT
+    # SLT Model
     slt_model = SLT(config=config)
     slt_model.to(device)
 
