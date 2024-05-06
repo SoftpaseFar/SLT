@@ -223,7 +223,7 @@ def train_one_epoch(args, epoch,
     slt_train_dict['slt_model'].train(True)
 
     for step, (src_input, tgt_input) in enumerate(dataloader):
-        print(f"Epoch {epoch + 1} train, Step {step}...")
+        print(f"Epoch {epoch + 1} train, Step {step + 1}...")
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
         vocab_masked_lm_loss = criterion(vocab_logits.view(-1, vocab_logits.shape[-1]),
