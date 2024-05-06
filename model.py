@@ -102,8 +102,8 @@ class TextDecoder(nn.Module):
             input_ids=decoder_input_ids.cuda(),
             attention_mask=tgt_input['attention_mask'].cuda(),
 
-            encoder_hidden_states=encoder_hidden_states.cuda(),
-            encoder_attention_mask=masked_tgt_input['attention_mask'].cuda(),
+            encoder_hidden_states=encoder_hidden_states[:, 1:-2, :].cuda(),
+            encoder_attention_mask=masked_tgt_input['attention_mask'][:, 1:-2, :].cuda(),
 
             return_dict=True,
         )
