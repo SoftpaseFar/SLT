@@ -123,8 +123,8 @@ class How2SignDataset(Dataset):
                 vid,
                 torch.zeros(imgs_batch_max_len - len(vid), vid.size(1), vid.size(2), vid.size(3)).to(vid.device)
             )
-            , dim=0).to(self.args['device'])
-                      for vid in imgs_batch_tmp]
+            , dim=0)
+            for vid in imgs_batch_tmp]
         # # 计算S3D操作后的视频掩码 TODO 考虑掩码
         # s3d_after_length = ((torch.tensor(imgs_batch_len) / 2 - 3) / 2 + 1 - 2) / 2 + 1 - 1
         # s3d_after_length = s3d_after_length.long()
@@ -140,7 +140,7 @@ class How2SignDataset(Dataset):
             'input_ids': imgs_batch,
             # 'attention_mask': img_padding_mask,
 
-            'src_length_batch': torch.tensor(imgs_batch_max_len).to(self.args['device'])}
+            'src_length_batch': imgs_batch_max_len}
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
@@ -173,10 +173,6 @@ class How2SignDataset(Dataset):
         # 情感pad初进行情感注入
         for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
             tgt_input['input_ids'][i, 0] = value
-
-        # 测试
-        # print(src_input)
-        # print(tgt_input)
 
         # 返回一个batch视频集合 目标翻译的文本
         return src_input, tgt_input
