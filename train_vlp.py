@@ -30,7 +30,7 @@ def get_args_parser():
     a_parser.add_argument('--epochs', default=2, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
-    a_parser.add_argument('--device', default='cpu')
+    a_parser.add_argument('--device', default='cuda')
     # a_parser.add_argument('--device', default='cuda')
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
