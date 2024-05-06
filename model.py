@@ -96,7 +96,7 @@ class TextDecoder(nn.Module):
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
         with torch.no_grad():
             _, encoder_hidden_states = txt_encoder(masked_tgt_input)
-        
+
         # 打印 encoder_hidden_states 和 attention_mask
         print(encoder_hidden_states.shape)
         print(masked_tgt_input['attention_mask'].shape)
@@ -107,7 +107,7 @@ class TextDecoder(nn.Module):
             attention_mask=tgt_input['attention_mask'].cuda(),
 
             encoder_hidden_states=encoder_hidden_states[:, 1:-2, :].cuda(),
-            encoder_attention_mask=masked_tgt_input['attention_mask'][:, 1:-2, :].cuda(),
+            encoder_attention_mask=masked_tgt_input['attention_mask'][:, 1:-2].cuda(),
 
             return_dict=True,
         )
