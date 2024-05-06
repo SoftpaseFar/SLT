@@ -170,8 +170,7 @@ def main(args_, config):
         pass
 
     # 开始训练
-    print(Fore.RED + f"开始训练，共训练 {args['epochs']} 轮.")
-    print(Style.RESET_ALL, end='')
+    print(Fore.RED + f"开始训练，共训练{Fore.RED} {args['epochs']} {Style.RESET_ALL}轮.")
 
     # 优化指标
     max_accuracy = 0.0
@@ -182,8 +181,8 @@ def main(args_, config):
                                       train_dataloader,
                                       slt_train_dict,
                                       criterion, loss_scaler)
-        print(Back.GREEN + f"Training - Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}")
-        print(Style.RESET_ALL, end='')
+        print(
+            f"Training -{Back.GREEN} Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}{Style.RESET_ALL}")
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -192,8 +191,7 @@ def main(args_, config):
                                        criterion,
                                        tokenizer)
         print(
-            Back.GREEN + f"Evaluation - Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}")
-        print(Style.RESET_ALL, end='')
+            f"Evaluation -{Back.GREEN} Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}{Style.RESET_ALL}")
 
         if max_accuracy < val_stats["bleu_s"]:
             max_accuracy = val_stats["bleu_s"]
@@ -211,8 +209,7 @@ def main(args_, config):
                     'max_accuracy': max_accuracy
                 }, args=args, filename=f"slt_checkpoint_{epoch + 1}.pth.tar")
 
-        print(Back.GREEN + f'当前最优 Blue-4分数: {max_accuracy:.2f}%')
-        print(Style.RESET_ALL, end='')
+        print(f'当前最优{Back.GREEN} Blue-4分数: {max_accuracy:.2f}%{Style.RESET_ALL}')
 
         # 其他逻辑 TODO
         print("其他逻辑...")
