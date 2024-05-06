@@ -228,9 +228,9 @@ def train_one_epoch(args, epoch,
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
         vocab_masked_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                         tgt_input['input_ids'][:, 1:].reshape(-1)) * args['loss_lambda']
+                                         tgt_input['input_ids'][:, 1:].reshape(-1)) * args['loss_lambda'].to(args['device'])
         emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].reshape(-1)) * args[
-            'loss_lambda']
+            'loss_lambda'].to(args['device'])
 
         vocab_emo_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
         # 梯度清零 梯度回传 更新梯度
