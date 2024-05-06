@@ -313,7 +313,7 @@ if __name__ == '__main__':
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     # 设置进程启动方法为 'spawn'
-    multiprocessing.set_start_method('spawn')
+    multiprocessing.set_start_method('spawn', force=True)
 
     # 加载参数
     parser = argparse.ArgumentParser('VLP scripts', parents=[get_args_parser()])
