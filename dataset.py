@@ -158,6 +158,10 @@ class How2SignDataset(Dataset):
 
         print(f"正在加载数据集...")
 
+        # 情感pad初进行情感注入
+        for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
+            tgt_input['input_ids'][i, 0] = value
+
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:
             masked_tgt = utils.noise_injecting(tgt_batch, self.args['noise_rate'],
@@ -169,10 +173,6 @@ class How2SignDataset(Dataset):
                                               padding=True,
                                               truncation=True)
             return src_input, tgt_input, masked_tgt_input
-
-        # 情感pad初进行情感注入
-        for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
-            tgt_input['input_ids'][i, 0] = value
 
         # 返回一个batch视频集合 目标翻译的文本
         return src_input, tgt_input
