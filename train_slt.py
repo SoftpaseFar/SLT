@@ -142,7 +142,7 @@ def main(args_, config):
 
     # SLT
     slt_model = SLT(config=config)
-    # slt_model.to(device)
+    slt_model.to(device)
 
     # 优化器 学习率调度器
     optimizer = create_optimizer(args_, slt_model)
