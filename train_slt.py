@@ -30,7 +30,7 @@ def get_args_parser():
     # a_parser.add_argument('--device', default='cuda')
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
-    a_parser.add_argument('--pin_mem', action='store_true', default=True)
+    a_parser.add_argument('--pin_mem', action='store_true', default=False)
     a_parser.add_argument('--num_workers', default=8, type=int)
     # a_parser.add_argument('--num_workers', default=2, type=int)
     a_parser.add_argument('--checkpoints_dir', default='./checkpoints/')
