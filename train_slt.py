@@ -17,6 +17,7 @@ from timm.utils import NativeScaler
 from definition import *
 import utils
 from sacrebleu.metrics import BLEU
+import multiprocessing
 
 
 def get_args_parser():
@@ -310,6 +311,9 @@ def evaluate_one_epoch(args, epoch,
 if __name__ == '__main__':
     # 禁用分词器的并行处理
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+    # 设置进程启动方法为 'spawn'
+    multiprocessing.set_start_method('spawn')
 
     # 加载参数
     parser = argparse.ArgumentParser('VLP scripts', parents=[get_args_parser()])
