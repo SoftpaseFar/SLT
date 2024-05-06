@@ -60,8 +60,9 @@ class ImageCLIP(nn.Module):
             for j, frame in enumerate(video):
                 src[i, :, j, :, :] = frame
 
+        # 移动到GPU上
         # 获取每个视频的表示，，模型推导
-        src = self.S3D.features(src)
+        src = self.S3D.features(src.cuda())
         src = self.S3D.avgpool(src)
 
         src = self.S3D.classifier(src)
@@ -116,8 +117,8 @@ class TextDecoder(nn.Module):
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
                                                self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
-            input_ids=decoder_input_ids,
-            attention_mask=tgt_input['attention_mask'],
+            input_ids=decoder_input_ids.cuda(),
+            attention_mask=tgt_input['attention_mask'].cuda(),
 
             encoder_hidden_states=encoder_hidden_states,
             # encoder_attention_mask=encoder_attention_mask,
