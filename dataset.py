@@ -175,8 +175,8 @@ class How2SignDataset(Dataset):
             tgt_input['input_ids'][i, 0] = value
 
         # 测试
-        print(src_input)
-        print(tgt_input)
+        # print(src_input)
+        # print(tgt_input)
 
         # 返回一个batch视频集合 目标翻译的文本
         return src_input, tgt_input
