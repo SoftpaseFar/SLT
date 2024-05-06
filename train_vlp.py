@@ -185,12 +185,14 @@ def main(args_, config):
         train_stats = train_one_epoch(args, epoch, train_dataloader,
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
-        print(f"{Back.GREEN}Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
+        print(
+            f"{Back.GREEN}Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
         # 评估一个epoch
         val_stats = evaluate_one_epoch(epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
-        print(f"{Back.GREEN}Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}")
+        print(
+            f"{Back.GREEN}Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}")
         val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
 
         # 检查是否有新的最低验证损失
@@ -248,7 +250,7 @@ def train_one_epoch(args, epoch, dataloader,
     clip_loss = criterion['loss_kl']
     tdm_loss = criterion['loss_ce']
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
-        print(f"Epoch {epoch + 1} train, Step {step}...")
+        print(f"Epoch {epoch + 1} train, Step {step + 1}...")
 
         # 刷新梯度
         clip_train_dict['optimizer'].zero_grad()
