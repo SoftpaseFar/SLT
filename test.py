@@ -6,6 +6,7 @@ import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 from definition import *
 from colorama import init, Fore, Back, Style
+from termcolor import colored
 
 
 # definition
@@ -109,12 +110,19 @@ if __name__ == '__main__':
     # print(res[0])
 
     # 初始化 colorama
-    init()
-
+    # init()
+    #
+    # # 打印红色文本
+    # print(Fore.RED + 'This is red text')
+    # # 打印绿色背景
+    # print(Back.GREEN + 'This has a green background')
+    # # 重置颜色
+    # print(Style.RESET_ALL + 'Back to normal')
     # 打印红色文本
-    print(Fore.RED + 'This is red text')
+    print(colored('This is red text', 'red'))
     # 打印绿色背景
-    print(Back.GREEN + 'This has a green background')
-    # 重置颜色
-    print(Style.RESET_ALL + 'Back to normal')
+    print(colored('This has a green background', 'green', 'on_red'))
+
+    # 重置颜色和样式（termcolor 中不需要额外的操作）
+    print(colored('Back to normal', 'white'))
     pass

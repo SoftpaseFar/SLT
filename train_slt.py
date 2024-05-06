@@ -18,7 +18,7 @@ from definition import *
 import utils
 from sacrebleu.metrics import BLEU
 import multiprocessing
-from colorama import init, Fore, Back
+from colorama import init, Fore, Back, Style
 
 
 def get_args_parser():
@@ -171,6 +171,7 @@ def main(args_, config):
 
     # 开始训练
     print(Fore.RED + f"开始训练，共训练 {args['epochs']} 轮.")
+    print(Style.RESET_ALL, end='')
 
     # 优化指标
     max_accuracy = 0.0
@@ -182,6 +183,7 @@ def main(args_, config):
                                       slt_train_dict,
                                       criterion, loss_scaler)
         print(Back.GREEN + f"Training - Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}")
+        print(Style.RESET_ALL, end='')
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -191,6 +193,7 @@ def main(args_, config):
                                        tokenizer)
         print(
             Back.GREEN + f"Evaluation - Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}")
+        print(Style.RESET_ALL, end='')
 
         if max_accuracy < val_stats["bleu_s"]:
             max_accuracy = val_stats["bleu_s"]
@@ -209,6 +212,7 @@ def main(args_, config):
                 }, args=args, filename=f"slt_checkpoint_{epoch + 1}.pth.tar")
 
         print(Back.GREEN + f'当前最优 Blue-4分数: {max_accuracy:.2f}%')
+        print(Style.RESET_ALL, end='')
 
         # 其他逻辑 TODO
         print("其他逻辑...")
