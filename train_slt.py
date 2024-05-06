@@ -18,7 +18,7 @@ from definition import *
 import utils
 from sacrebleu.metrics import BLEU
 import multiprocessing
-from colorama import init, Fore, Back, Style
+from colorama import init,  Back
 
 
 def get_args_parser():
@@ -170,7 +170,7 @@ def main(args_, config):
         pass
 
     # 开始训练
-    print(Fore.RED + f"{Style.RESET_ALL}开始训练，共训练{Fore.RED} {args['epochs']} {Style.RESET_ALL}轮.")
+    print(f"开始训练，共训练{Back.GREEN} {args['epochs']} {Back.RESET}轮.")
 
     # 优化指标
     max_accuracy = 0.0
@@ -182,7 +182,7 @@ def main(args_, config):
                                       slt_train_dict,
                                       criterion, loss_scaler)
         print(
-            f"Training -{Back.GREEN} Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}{Style.RESET_ALL}")
+            f"{Back.GREEN}Training - Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}{Back.RESET}")
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -191,7 +191,7 @@ def main(args_, config):
                                        criterion,
                                        tokenizer)
         print(
-            f"Evaluation -{Back.GREEN} Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}{Style.RESET_ALL}")
+            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}{Back.RESET}")
 
         if max_accuracy < val_stats["bleu_s"]:
             max_accuracy = val_stats["bleu_s"]
@@ -209,7 +209,7 @@ def main(args_, config):
                     'max_accuracy': max_accuracy
                 }, args=args, filename=f"slt_checkpoint_{epoch + 1}.pth.tar")
 
-        print(f'当前最优{Back.GREEN} Blue-4分数: {max_accuracy:.2f}%{Style.RESET_ALL}')
+        print(f'当前最优{Back.GREEN} Blue-4分数: {max_accuracy:.2f}%{Back.RESET}')
 
         # 其他逻辑 TODO
         print("其他逻辑...")
