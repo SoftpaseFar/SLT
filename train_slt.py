@@ -227,10 +227,10 @@ def train_one_epoch(args, epoch,
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
+        loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
         vocab_masked_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                         tgt_input['input_ids'][:, 1:].reshape(-1)) * args['loss_lambda'].to(args['device'])
-        emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].reshape(-1)) * args[
-            'loss_lambda'].to(args['device'])
+                                         tgt_input['input_ids'][:, 1:].reshape(-1)) * loss_lambda
+        emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].reshape(-1)) * loss_lambda
 
         vocab_emo_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
         # 梯度清零 梯度回传 更新梯度
