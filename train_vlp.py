@@ -271,8 +271,8 @@ def train_one_epoch(args, epoch, dataloader,
             with torch.cuda.amp.autocast():
                 tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
                                                                       masked_tgt_input=masked_tgt_input,
-                                                                      txt_encoder=td_train_dict[
-                                                                          'txt_decoder'].get_txt_encoder())
+                                                                      txt_encoder=clip_train_dict[
+                                                                          'clip_model'].get_txt_encoder())
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
                                                 tgt_input['input_ids'][:, 1:].reshape(-1)) * args['loss_lambda']
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].reshape(-1)) * args[
