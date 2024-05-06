@@ -276,7 +276,13 @@ def train_one_epoch(args, epoch, dataloader,
                 loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
                                                 tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+
+                # 打印 emo_logits
+                print(emo_logits)
+                print(tgt_input['input_ids'][:, 0])
+
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+                emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
                 # 打印 vocab_masked_lm_loss 和 emo_masked_lm_loss
                 print(vocab_masked_lm_loss)
