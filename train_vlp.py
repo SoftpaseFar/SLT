@@ -248,6 +248,7 @@ def train_one_epoch(args, epoch, dataloader,
     td_train_dict['txt_decoder'].train(True)
 
     clip_loss = criterion['loss_kl']
+    
     tdm_loss = criterion['loss_ce']
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
