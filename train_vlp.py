@@ -274,8 +274,8 @@ def train_one_epoch(args, epoch, dataloader,
                                                                       txt_encoder=clip_train_dict[
                                                                           'clip_model'].get_txt_encoder())
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                tgt_input['input_ids'][:, 1:].reshape(-1)) * args['loss_lambda']
-                emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].reshape(-1)) * args[
+                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * args['loss_lambda']
+                emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * args[
                     'loss_lambda']
 
                 masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
