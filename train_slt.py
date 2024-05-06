@@ -170,7 +170,7 @@ def main(args_, config):
         pass
 
     # 开始训练
-    print(Fore.RED + f"开始训练，共训练{Fore.RED} {args['epochs']} {Style.RESET_ALL}轮.")
+    print(Fore.RED + f"{Style.RESET_ALL}开始训练，共训练{Fore.RED} {args['epochs']} {Style.RESET_ALL}轮.")
 
     # 优化指标
     max_accuracy = 0.0
