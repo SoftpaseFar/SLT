@@ -282,7 +282,6 @@ def train_one_epoch(args, epoch, dataloader,
                 print(tgt_input['input_ids'][:, 0])
 
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
-                emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
                 # 打印 vocab_masked_lm_loss 和 emo_masked_lm_loss
                 print(vocab_masked_lm_loss)
