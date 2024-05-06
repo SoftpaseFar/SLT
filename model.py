@@ -112,8 +112,8 @@ class TextDecoder(nn.Module):
         return vocab_logits, emo_logits
 
     # SLT阶段正向反馈
-    def forward_slt(self, args, tgt_input, encoder_hidden_states):
-        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'].to(args['device']),
+    def forward_slt(self, tgt_input, encoder_hidden_states):
+        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
                                                self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids,
@@ -130,13 +130,13 @@ class TextDecoder(nn.Module):
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
 
-    def forward(self, args, phase=None, tgt_input=None,
+    def forward(self, phase=None, tgt_input=None,
                 masked_tgt_input=None, txt_encoder=None,
                 encoder_hidden_states=None):
         if phase == 'clip':
             return self.forward_clip(tgt_input, masked_tgt_input, txt_encoder)
         elif phase == 'slt':
-            return self.forward_slt(args, tgt_input, encoder_hidden_states)
+            return self.forward_slt(tgt_input, encoder_hidden_states)
         else:
             raise ValueError("参数错误")
 
