@@ -99,11 +99,10 @@ class How2SignDataset(Dataset):
         return imgs
 
     def collate_fn(self, batch):
-        name_batch, imgs_batch_tmp, emo_batch_tmp, tgt_batch, src_length_batch, = [], [], [], [], []
+        imgs_batch_tmp, emo_batch_tmp, tgt_batch, src_length_batch, = [], [], [], []
 
         # 将批序列的name、imgs、tgt分别包装成列表
-        for name_sample, imgs_sample, tgt_sample in batch:
-            name_batch.append(name_sample)
+        for _, imgs_sample, tgt_sample in batch:
             imgs_batch_tmp.append(imgs_sample)
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
@@ -138,12 +137,10 @@ class How2SignDataset(Dataset):
         # img_padding_mask = (mask_gen != PAD_IDX).long()
 
         src_input = {
-            'name_batch': name_batch,
-
-            'input_ids': imgs_batch,
+            'input_ids': torch.tensor(imgs_batch),
             # 'attention_mask': img_padding_mask,
 
-            'src_length_batch': imgs_batch_max_len}
+            'src_length_batch': torch.tensor(imgs_batch_max_len)}
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
