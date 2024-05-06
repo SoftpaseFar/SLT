@@ -97,6 +97,10 @@ class TextDecoder(nn.Module):
         with torch.no_grad():
             _, encoder_hidden_states = txt_encoder(masked_tgt_input)
 
+        # 打印 encoder_hidden_states 和 attention_mask
+        print(encoder_hidden_states.shape)
+        print(masked_tgt_input['attention_mask'].shape)
+
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids.cuda(),
