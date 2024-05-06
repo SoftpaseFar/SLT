@@ -137,10 +137,10 @@ class How2SignDataset(Dataset):
         # img_padding_mask = (mask_gen != PAD_IDX).long()
 
         src_input = {
-            'input_ids': torch.tensor(imgs_batch),
+            'input_ids': imgs_batch,
             # 'attention_mask': img_padding_mask,
 
-            'src_length_batch': torch.tensor(imgs_batch_max_len)}
+            'src_length_batch': imgs_batch_max_len}
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
@@ -173,6 +173,10 @@ class How2SignDataset(Dataset):
         # 情感pad初进行情感注入
         for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
             tgt_input['input_ids'][i, 0] = value
+
+        # 测试
+        print(src_input)
+        print(tgt_input)
 
         # 返回一个batch视频集合 目标翻译的文本
         return src_input, tgt_input
