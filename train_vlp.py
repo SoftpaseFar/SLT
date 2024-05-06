@@ -185,12 +185,12 @@ def main(args_, config):
         train_stats = train_one_epoch(args, epoch, train_dataloader,
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
-        print(f"Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}")
+        print(f"{Back.GREEN}Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
         # 评估一个epoch
         val_stats = evaluate_one_epoch(epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
-        print(f"Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}")
+        print(f"{Back.GREEN}Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}")
         val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
 
         # 检查是否有新的最低验证损失
@@ -260,9 +260,7 @@ def train_one_epoch(args, epoch, dataloader,
             loss_t_i = clip_loss(txt_img_s_matrix, ground_truth)
             clip_total_loss = (loss_i_t + loss_t_i) / 2.
         # 根据梯度模型参数
-        loss_scaler.scale(clip_total_loss).backward()
-        loss_scaler.step(clip_train_dict['optimizer'])
-        loss_scaler.update()
+        loss_scaler(clip_total_loss, clip_train_dict['optimizer'])
         clip_losses.append(clip_total_loss.item())
 
         # 5个step 更新解码器
@@ -273,16 +271,14 @@ def train_one_epoch(args, epoch, dataloader,
                                                                       masked_tgt_input=masked_tgt_input,
                                                                       txt_encoder=td_train_dict[
                                                                           'txt_decoder'].get_txt_encoder())
-                vocab_masked_lm_loss = tdm_loss(tdm_logits.view(-1, tdm_logits.shape[-1]),
-                                                tgt_input['input_ids'][:, 1:, :].view(-1)) * args['loss_lambda']
-                emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0, :].view(-1)) * args[
+                vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
+                                                tgt_input['input_ids'][:, 1:].reshape(-1)) * args['loss_lambda']
+                emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].reshape(-1)) * args[
                     'loss_lambda']
 
                 masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
                 # 根据梯度模型参数
-                loss_scaler.scale(masked_lm_loss).backward()
-                loss_scaler.step(td_train_dict['optimizer'])
-                loss_scaler.update()
+                loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
                 tdm_losses.append(masked_lm_loss.item())
 
         # 梯度爆炸

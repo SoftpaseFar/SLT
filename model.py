@@ -18,12 +18,12 @@ class TextCLIP(nn.Module):
 
     def forward(self, tgt_input):
         # 隐藏层输出
-        logits = self.txt_encoder(input_ids=tgt_input['input_ids'],
-                                  attention_mask=tgt_input['attention_mask'])[0]
+        logits = self.txt_encoder(input_ids=tgt_input['input_ids'].cuda(),
+                                  attention_mask=tgt_input['attention_mask'].cuda())[0]
         # 获取句子编码
-        sentence = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
+        emo_voca_emb = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
         # emotion = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
-        return self.lm_head(sentence), logits
+        return self.lm_head(emo_voca_emb), logits[:, 1:, :]
 
 
 # CLIP图像编码器
@@ -99,11 +99,11 @@ class TextDecoder(nn.Module):
 
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
-            input_ids=decoder_input_ids,
-            attention_mask=tgt_input['attention_mask'],
+            input_ids=decoder_input_ids.cuda(),
+            attention_mask=tgt_input['attention_mask'].cuda(),
 
-            encoder_hidden_states=encoder_hidden_states,
-            encoder_attention_mask=masked_tgt_input['attention_mask'],
+            encoder_hidden_states=encoder_hidden_states.cuda(),
+            encoder_attention_mask=masked_tgt_input['attention_mask'].cuda(),
 
             return_dict=True,
         )
