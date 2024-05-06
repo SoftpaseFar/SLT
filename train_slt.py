@@ -234,9 +234,8 @@ def train_one_epoch(args, epoch,
         vocab_emo_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
         # 梯度清零 梯度回传 更新梯度
         slt_train_dict['optimizer'].zero_grad()
-        loss_scaler.scale(vocab_emo_loss).backward()
-        loss_scaler.step(vocab_emo_loss['optimizer'])
-        loss_scaler.update()
+        # 使用loss_scaler的__call__方法进行损失的缩放和梯度更新
+        loss_scaler(vocab_emo_loss, slt_train_dict['optimizer'])
         vocab_emo_losses.append(vocab_emo_loss.item())
 
         # 梯度爆炸
