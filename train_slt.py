@@ -78,6 +78,7 @@ def main(args_, config):
     args = vars(args_)
     # 获取设备
     device = torch.device(args['device'])
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("starting on...", device, sep=' ')
 
     # 设置随机种子
@@ -142,7 +143,7 @@ def main(args_, config):
 
     # SLT
     slt_model = SLT(config=config)
-    # slt_model.to(device)
+    slt_model.to(device)
 
     # 优化器 学习率调度器
     optimizer = create_optimizer(args_, slt_model)
