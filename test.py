@@ -5,6 +5,7 @@ import mediapipe as mp
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 from definition import *
+from colorama import init, Fore, Back, Style
 
 
 # definition
@@ -104,6 +105,16 @@ if __name__ == '__main__':
     # output = txt_logits[:, [2, 2]]
     # print(output)
 
-    res = extract_keypoints_from_video('./data/How2Sign/videos/-g0sqksgyc4_3-2-rgb_front.mp4')
-    print(res[0])
+    # res = extract_keypoints_from_video('./data/How2Sign/videos/-g0sqksgyc4_3-2-rgb_front.mp4')
+    # print(res[0])
+
+    # 初始化 colorama
+    init()
+
+    # 打印红色文本
+    print(Fore.RED + 'This is red text')
+    # 打印绿色背景
+    print(Back.GREEN + 'This has a green background')
+    # 重置颜色
+    print(Style.RESET_ALL + 'Back to normal')
     pass
