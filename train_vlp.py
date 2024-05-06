@@ -278,18 +278,22 @@ def train_one_epoch(args, epoch, dataloader,
                                                 tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
+                # 打印 vocab_masked_lm_loss 和 emo_masked_lm_loss
+                print(vocab_masked_lm_loss)
+                print(emo_masked_lm_loss)
+
                 masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
                 # 根据梯度模型参数
                 loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
                 tdm_losses.append(masked_lm_loss.item())
 
-            # 梯度爆炸
-            if not math.isfinite(clip_total_loss.item()):
-                print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
-                sys.exit(1)
-            if not math.isfinite(masked_lm_loss.item()):
-                print("ML Loss: {}, 结束训练".format(masked_lm_loss.item()))
-                sys.exit(1)
+        # 梯度爆炸
+        if not math.isfinite(clip_total_loss.item()):
+            print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
+            sys.exit(1)
+        if not math.isfinite(masked_lm_loss.item()):
+            print("ML Loss: {}, 结束训练".format(masked_lm_loss.item()))
+            sys.exit(1)
 
     # 更新学习率
     clip_train_dict['lr_scheduler'].step()
