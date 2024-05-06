@@ -223,6 +223,9 @@ def train_one_epoch(args, epoch,
     slt_train_dict['slt_model'].train(True)
 
     for step, (src_input, tgt_input) in enumerate(dataloader):
+        # 放到 device 上
+        src_input = {k: v.to(args['device']) for k, v in src_input.items()}
+        tgt_input = {k: v.to(args['device']) for k, v in tgt_input.items()}
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
