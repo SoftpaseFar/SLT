@@ -283,8 +283,6 @@ def train_one_epoch(args, epoch, dataloader,
                 loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
                 tdm_losses.append(masked_lm_loss.item())
 
-            # 更新优化器步骤
-            td_train_dict['optimizer'].step()
         # 梯度爆炸
         if not math.isfinite(clip_total_loss.item()):
             print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
@@ -293,12 +291,9 @@ def train_one_epoch(args, epoch, dataloader,
             print("TDM Loss: {}, 结束训练".format(masked_lm_loss.item()))
             sys.exit(1)
 
-        # 更新优化器步骤
-        clip_train_dict['optimizer'].step()
-
     # 更新学习率
     clip_train_dict['lr_scheduler'].step(epoch)
-    td_train_dict['lr_scheduler'].step(epoch)
+    td_train_dict['lr_scheduler'].step()
 
     avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
 
