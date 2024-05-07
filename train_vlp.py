@@ -250,9 +250,6 @@ def train_one_epoch(args, epoch, dataloader,
     tdm_loss = criterion['loss_ce']
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
-        # 更新学习率
-        clip_train_dict['lr_scheduler'].step(epoch)
-        td_train_dict['lr_scheduler'].step()
 
         # 刷新梯度
         clip_train_dict['optimizer'].zero_grad()
@@ -293,6 +290,10 @@ def train_one_epoch(args, epoch, dataloader,
         if not math.isfinite(masked_lm_loss.item()):
             print("TDM Loss: {}, 结束训练".format(masked_lm_loss.item()))
             sys.exit(1)
+
+    # 更新学习率
+    clip_train_dict['lr_scheduler'].step(epoch)
+    td_train_dict['lr_scheduler'].step()
 
     avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
 
