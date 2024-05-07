@@ -1,4 +1,4 @@
-# Sign Language Translation
+# Emotion Sign Language Translation
 
 ## 框架图
 
