@@ -248,7 +248,7 @@ def train_one_epoch(args, epoch,
             sys.exit(1)
 
     # 更新学习率
-    slt_train_dict['lr_scheduler'].step()
+    slt_train_dict['lr_scheduler'].step(epoch)
 
     avg_vocab_emo_loss = sum(vocab_emo_losses) / len(vocab_emo_losses) if vocab_emo_losses else 0
 

@@ -186,13 +186,13 @@ def main(args_, config):
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
         print(
-            f"{Back.GREEN}Training - Epoch: {epoch}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
+            f"{Back.GREEN}Training - Epoch: {epoch + 1}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
         print(
-            f"{Back.GREEN}Evaluation - Epoch: {epoch}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}")
+            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}")
         val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
 
         # 检查是否有新的最低验证损失
@@ -283,6 +283,8 @@ def train_one_epoch(args, epoch, dataloader,
                 loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
                 tdm_losses.append(masked_lm_loss.item())
 
+            # 更新优化器步骤
+            td_train_dict['optimizer'].step()
         # 梯度爆炸
         if not math.isfinite(clip_total_loss.item()):
             print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
@@ -291,9 +293,12 @@ def train_one_epoch(args, epoch, dataloader,
             print("TDM Loss: {}, 结束训练".format(masked_lm_loss.item()))
             sys.exit(1)
 
+        # 更新优化器步骤
+        clip_train_dict['optimizer'].step()
+
     # 更新学习率
     clip_train_dict['lr_scheduler'].step(epoch)
-    td_train_dict['lr_scheduler'].step()
+    td_train_dict['lr_scheduler'].step(epoch)
 
     avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
 
