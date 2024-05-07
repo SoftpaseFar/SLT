@@ -188,7 +188,7 @@ def main(args_, config):
         print(
             f"{Back.GREEN}Training - Epoch: {epoch}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
         # 评估一个epoch
-        val_stats = evaluate_one_epoch(epoch, val_dataloader,
+        val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
         print(
@@ -304,7 +304,7 @@ def train_one_epoch(args, epoch, dataloader,
 
 
 # 评估一个epoch
-def evaluate_one_epoch(epoch, dataloader,
+def evaluate_one_epoch(args, epoch, dataloader,
                        clip_train_dict, td_train_dict,
                        criterion):
     print(f"Epoch {epoch + 1} val...")
