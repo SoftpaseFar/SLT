@@ -292,7 +292,7 @@ def train_one_epoch(args, epoch, dataloader,
             sys.exit(1)
 
     # 更新学习率
-    clip_train_dict['lr_scheduler'].step()
+    clip_train_dict['lr_scheduler'].step(epoch)
     td_train_dict['lr_scheduler'].step()
 
     avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
