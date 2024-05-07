@@ -186,7 +186,7 @@ def main(args_, config):
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
         print(
-            f"{Back.GREEN}Training - Epoch: {epoch}, Loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
+            f"{Back.GREEN}Training - Epoch: {epoch}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
         # 评估一个epoch
         val_stats = evaluate_one_epoch(epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
@@ -229,10 +229,9 @@ def main(args_, config):
             print(f"训练早停，patience：{patience}，第{epoch + 1}轮.")
             break
 
-    # 测试集评估
+    # 测试集评估 TODO
     print("加载模型用于测试数据集，查看效果，请稍等...")
     print("代码待完善，程序结束...")
-    # TODO
 
 
 def train_one_epoch(args, epoch, dataloader,
@@ -277,15 +276,7 @@ def train_one_epoch(args, epoch, dataloader,
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
                                                 tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
 
-                # # 打印 emo_logits
-                # print(emo_logits)
-                # print(tgt_input['input_ids'][:, 0])
-
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
-
-                # # 打印 vocab_masked_lm_loss 和 emo_masked_lm_loss
-                # print(vocab_masked_lm_loss)
-                # print(emo_masked_lm_loss)
 
                 masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
                 # 根据梯度模型参数
@@ -297,7 +288,7 @@ def train_one_epoch(args, epoch, dataloader,
             print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
             sys.exit(1)
         if not math.isfinite(masked_lm_loss.item()):
-            print("ML Loss: {}, 结束训练".format(masked_lm_loss.item()))
+            print("TDM Loss: {}, 结束训练".format(masked_lm_loss.item()))
             sys.exit(1)
 
     # 更新学习率
@@ -326,9 +317,10 @@ def evaluate_one_epoch(epoch, dataloader,
 
     with torch.no_grad():
         for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
-            print(f"Epoch {epoch + 1} val, Step {step}...")
+            print(f"Epoch {epoch + 1} val, Step {step + 1}...")
             # 采用自动混合精度
             with torch.cuda.amp.autocast():
+                # clip 部分
                 img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
                                                                                                  tgt_input)
                 loss_i_t = criterion['loss_kl'](img_txt_s_matrix, ground_truth)
@@ -336,10 +328,21 @@ def evaluate_one_epoch(epoch, dataloader,
                 clip_total_loss = (loss_i_t + loss_t_i) / 2.
                 clip_losses.append(clip_total_loss.item())
 
-                tdm_logits = td_train_dict['txt_decoder'](tgt_input, masked_tgt_input,
-                                                          td_train_dict['txt_decoder'].get_txt_encoder())
-                masked_lm_loss = criterion['loss_ce'](tdm_logits.view(-1, tdm_logits.shape[-1]),
-                                                      tgt_input['input_ids'].view(-1)) * args['loss_lambda']
+                # mask 部分
+                tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
+                                                                      masked_tgt_input=masked_tgt_input,
+                                                                      txt_encoder=clip_train_dict[
+                                                                          'clip_model'].get_txt_encoder())
+                loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
+                vocab_masked_lm_loss = criterion['loss_ce'](tdm_logits.reshape(-1, tdm_logits.shape[-1]),
+                                                            tgt_input['input_ids'][:, 1:].cuda().reshape(
+                                                                -1)) * loss_lambda
+
+                emo_masked_lm_loss = criterion['loss_ce'](emo_logits,
+                                                          tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+
+                masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
+
                 tdm_losses.append(masked_lm_loss.item())
 
     avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, clip_losses)
