@@ -94,6 +94,7 @@ class How2SignDataset(Dataset):
             tgt_batch.append(tgt_sample)
             if self.args['need_keypoints'] and other_data:
                 keypoints_sample = other_data[0]
+                print('keypoints_sample.shape: ', torch.tensor(keypoints_sample).shape)
                 src_length_batch.append(keypoints_sample)
 
         # 每个视频真实长度
