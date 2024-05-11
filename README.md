@@ -16,4 +16,16 @@ ENDPOINT = " https://hf-mirror.com"
 ps aux | grep git | awk '{print $2}' | xargs kill -9
 ```
 
+## 运行项目
+
+```python
+def gen_videos_vectors(x, y):
+    # 代码在utils里边
+    pass
+
+
+# 首先要运行 keypoints预处理
+gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
+```
+
 ## 待更新

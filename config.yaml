@@ -1,6 +1,7 @@
 # 数据集参数
 data:
   videos_dir: ./data/How2Sign/videos/
+  keypoints_dir: ./data/How2Sign/keypoints/
   train_label_path: ./data/How2Sign/train.csv
   val_label_path: ./data/How2Sign/val.csv
   test_label_path: ./data/How2Sign/test.csv

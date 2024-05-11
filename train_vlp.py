@@ -71,6 +71,8 @@ def get_args_parser():
     a_parser.add_argument('--save_interval', default=1, type=int)
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
+
+    a_parser.add_argument('--need_keypoints', default=True, type=bool)
     return a_parser
 
 

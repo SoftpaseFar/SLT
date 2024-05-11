@@ -6,7 +6,6 @@ import random
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
-import mediapipe as mp
 
 
 class How2SignDataset(Dataset):
@@ -32,14 +31,25 @@ class How2SignDataset(Dataset):
 
         video_name = sample['video_name']
         video_path = os.path.join(self.config['data']['videos_dir'], video_name)
-        imgs_sample = self.load_video(video_path)
-
+        imgs_sample = self._load_video(video_path)
         # length_sample = len(imgs_sample)
         tgt_sample = sample['text']
 
+        # 需要关键点信息
+        if self.args['need_keypoints']:
+            video_keypoints_name = sample['video_name'][:-4] + '.json'
+            video_keypoints_path = os.path.join(self.config['data']['keypoints_dir'], video_keypoints_name)
+            keypoints_sample = self._load_keypoints(video_keypoints_path)
+            return name_sample, imgs_sample, tgt_sample, keypoints_sample
+
         return name_sample, imgs_sample, tgt_sample
 
-    def load_video(self, video_path):
+    def _load_keypoints(self, path):
+        video_vectors = utils.load_json(path)
+        print('video_vectors:', video_vectors)
+        return video_vectors
+
+    def _load_video(self, video_path):
         data_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
@@ -73,16 +83,19 @@ class How2SignDataset(Dataset):
         return imgs
 
     def collate_fn(self, batch):
-        imgs_batch_tmp, emo_batch_tmp, tgt_batch, src_length_batch, = [], [], [], []
+        imgs_batch_tmp, emo_batch_tmp, tgt_batch, src_length_batch, keypoints_batch = [], [], [], [], []
 
         # 将批序列的name、imgs、tgt分别包装成列表
-        for _, imgs_sample, tgt_sample in batch:
+        for _, imgs_sample, tgt_sample, *other_data in batch:
             imgs_batch_tmp.append(imgs_sample)
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
             # 一个batch情感收集
             emo_batch_tmp.append('excited')
             tgt_batch.append(tgt_sample)
+            if self.args['need_keypoints'] and other_data:
+                keypoints_sample = other_data[0]
+                src_length_batch.append(keypoints_sample)
 
         # 每个视频真实长度
         imgs_batch_len = [len(vid) for vid in imgs_batch_tmp]
@@ -115,6 +128,10 @@ class How2SignDataset(Dataset):
             # 'attention_mask': img_padding_mask,
 
             'src_length_batch': imgs_batch_max_len}
+
+        # 是否需要 need_keypoints
+        if self.args['need_keypoints']:
+            src_input['keypoints_ids'] = keypoints_batch
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充

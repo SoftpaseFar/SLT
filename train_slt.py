@@ -71,6 +71,8 @@ def get_args_parser():
 
     a_parser.add_argument('--finetune', default=False, type=bool)
     a_parser.add_argument('--eval', default=False, type=bool)
+
+    a_parser.add_argument('--need_keypoints', default=True, type=bool)
     return a_parser
 
 
@@ -232,7 +234,7 @@ def train_one_epoch(args, epoch,
         loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
         # loss_lambda = torch.tensor(args['loss_lambda'])
         vocab_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                         tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+                                  tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
         emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
         vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2

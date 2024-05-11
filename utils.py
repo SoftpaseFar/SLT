@@ -268,6 +268,14 @@ def save_video_keypoints_vectors(output_file_path, vectors):
         print(output_file_path + ' 保存成功。')
 
 
+# 读取json文件
+def load_json(file_path):
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    return data
+
+
 if __name__ == '__main__':
+    # keypoints预处理
     gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
     pass
