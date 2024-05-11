@@ -134,6 +134,7 @@ class How2SignDataset(Dataset):
         if self.args['need_keypoints']:
             keypoints_batch_padded = pad_sequence(keypoints_batch, batch_first=True, padding_value=0)
             src_input['keypoints_ids'] = keypoints_batch_padded
+            print("src_input['keypoints_ids'].shape", torch.tensor(src_input['keypoints_ids']).shape)
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
