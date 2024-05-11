@@ -91,6 +91,7 @@ class KpsEncoder(nn.Module):
 
     def forward(self, src_input):
         ids = torch.tensor(src_input['keypoints_ids']).cuda()
+        print('ids.shape: ', ids.shape)
         h0 = torch.zeros(self.gru.num_layers, ids.size(0), self.gru.hidden_size).to(ids.device)
         head, hidden = self.gru(ids, h0)
         return head, hidden
