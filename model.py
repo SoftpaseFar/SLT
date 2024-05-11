@@ -80,6 +80,22 @@ class ImageCLIP(nn.Module):
         return head, logits
 
 
+# keypoints 特征提取, Keypoints Embedding -> KpsEncoder
+class KpsEncoder(nn.Module):
+    def __init__(self, input_size=411, hidden_size=1024, num_layers=1, batch_first=True):
+        super(KpsEncoder, self).__init__()
+        self.gru = nn.GRU(input_size=input_size,
+                          hidden_size=hidden_size,
+                          num_layers=num_layers,
+                          batch_first=batch_first)
+
+    def forward(self, src_input):
+        ids = torch.tensor(src_input['keypoints_ids']).cuda()
+        h0 = torch.zeros(self.gru.num_layers, ids.size(0), self.gru.hidden_size).to(ids.device)
+        head, hidden = self.gru(ids, h0)
+        return head, hidden
+
+
 # VLP阶段文本解码器
 class TextDecoder(nn.Module):
     def __init__(self, config):
@@ -173,6 +189,8 @@ class CLIP(nn.Module):
         super(CLIP, self).__init__()
         self.txt_encoder = TextCLIP(config=config)
         self.img_encoder = ImageCLIP(planes=1024, frozen=False)
+        self.kps_encoder = KpsEncoder()
+
         # logit缩放比率，可学习参数
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         # 文本编码器的隐藏状态
@@ -189,6 +207,10 @@ class CLIP(nn.Module):
 
     def forward(self, src_input, tgt_input):
         img_features, _ = self.img_encoder(src_input)
+        head, hidden = self.kps_encoder(src_input)
+        print(head.shape)
+        print(hidden.shape)
+
         txt_features, self.encoder_hidden_states = self.txt_encoder(tgt_input)
 
         # 特征信息归一化
