@@ -132,7 +132,15 @@ class How2SignDataset(Dataset):
 
         # 是否需要 need_keypoints
         if self.args['need_keypoints']:
-            keypoints_batch_padded = pad_sequence(torch.tensor(keypoints_batch), batch_first=True, padding_value=0)
+            # 找到最大长度
+            keypoints_batch_max_len = max(len(keypoints) for keypoints in keypoints_batch)
+            # 将所有序列填充到最大长度
+            keypoints_batch_padded = [torch.cat(
+                (keypoints,
+                 torch.zeros(keypoints_batch_max_len - len(keypoints), *keypoints.shape[1:]).to(keypoints.device)),
+                dim=0)
+                for keypoints in keypoints_batch]
+
             src_input['keypoints_ids'] = keypoints_batch_padded
             print("src_input['keypoints_ids'].shape", src_input['keypoints_ids'].shape)
 
