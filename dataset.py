@@ -6,6 +6,7 @@ import random
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+from torch.nn.utils.rnn import pad_sequence
 
 
 class How2SignDataset(Dataset):
@@ -97,8 +98,6 @@ class How2SignDataset(Dataset):
                 print('keypoints_sample.shape: ', torch.tensor(keypoints_sample).shape)
                 keypoints_batch.append(keypoints_sample)
 
-
-
         # 每个视频真实长度
         imgs_batch_len = [len(vid) for vid in imgs_batch_tmp]
         # print(imgs_batch_len)
@@ -133,7 +132,8 @@ class How2SignDataset(Dataset):
 
         # 是否需要 need_keypoints
         if self.args['need_keypoints']:
-            src_input['keypoints_ids'] = keypoints_batch
+            keypoints_batch_padded = pad_sequence(keypoints_batch, batch_first=True, padding_value=0)
+            src_input['keypoints_ids'] = keypoints_batch_padded
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
