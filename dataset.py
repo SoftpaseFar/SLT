@@ -46,7 +46,6 @@ class How2SignDataset(Dataset):
 
     def _load_keypoints(self, path):
         video_vectors = utils.load_json(path)
-        print('video_vectors:', video_vectors)
         return video_vectors
 
     def _load_video(self, video_path):
