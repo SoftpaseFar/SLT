@@ -208,8 +208,8 @@ class CLIP(nn.Module):
     def forward(self, src_input, tgt_input):
         img_features, _ = self.img_encoder(src_input)
         head, hidden = self.kps_encoder(src_input)
-        print(head.shape)
-        print(hidden.shape)
+        print('head：', head.shape)
+        print('hidden:', hidden.shape)
 
         txt_features, self.encoder_hidden_states = self.txt_encoder(tgt_input)
 
