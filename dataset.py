@@ -6,7 +6,6 @@ import random
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
-from torch.nn.utils.rnn import pad_sequence
 
 
 class How2SignDataset(Dataset):
