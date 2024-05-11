@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
 import random
-import matplotlib.pyplot as plt
 from definition import *
 import torch
 from pathlib import Path
+import matplotlib.pyplot as plt
+import os
+import json
 
 
 # -------
@@ -228,8 +230,44 @@ def tokenizer(words):
     return [emo_vocab.get(word, 0) for word in words]
 
 
+# ------
+# 将视频多个json合并成一个表征视频的vectors
+def gen_videos_vectors(pending_dir='', output_dir=''):
+    # 遍历 pending_keypoints 目录下的所有子目录
+    for subdir in os.listdir(pending_dir):
+        output_filename = subdir + '.json'
+        subdir_path = os.path.join(pending_dir, subdir)
+        output_file_path = os.path.join(output_dir, output_filename)
+        video_keypoints_vectors = merge_json_from_subdir(subdir_path)
+        save_video_keypoints_vectors(output_file_path, video_keypoints_vectors)
+    print('处理成功')
+
+
+# 把subdir_path的json合并成一个vector
+def merge_json_from_subdir(subdir_path):
+    video_keypoints_vectors = []
+    # 合并一个目录下所有的json文件
+    for filename in os.listdir(subdir_path):
+        frame_keypoints_vectors = []
+        if filename.endswith('.json'):
+            with open(os.path.join(subdir_path, filename), 'r') as f:
+                data = json.load(f)
+                if 'people' in data and len(data['people']) > 0:
+                    frame_keypoints_vectors.extend(data['people'][0]['pose_keypoints_2d'])
+                    frame_keypoints_vectors.extend(data['people'][0]['face_keypoints_2d'])
+                    frame_keypoints_vectors.extend(data['people'][0]['hand_left_keypoints_2d'])
+                    frame_keypoints_vectors.extend(data['people'][0]['hand_right_keypoints_2d'])
+        video_keypoints_vectors.append(frame_keypoints_vectors)
+    return video_keypoints_vectors
+
+
+# 保存合并后的大json文件
+def save_video_keypoints_vectors(output_file_path, vectors):
+    with open(output_file_path, 'w') as f:
+        json.dump(vectors, f)
+        print(output_file_path + ' 保存成功。')
+
+
 if __name__ == '__main__':
-    # res = load_dataset_cvs('./data/How2Sign/test.csv')
-    res = load_dataset_cvs('./data/How2Sign/test.csv')
-    print(res)
+    gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
     pass

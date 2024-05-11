@@ -39,32 +39,6 @@ class How2SignDataset(Dataset):
 
         return name_sample, imgs_sample, tgt_sample
 
-    def extract_keypoints_from_video(self, video_path):
-        # 初始化MediaPipe Pose模块
-        mp_pose = mp.solutions.pose
-        pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-
-        # 打开视频文件
-        cap = cv2.VideoCapture(video_path)
-        # 存储所有帧的关键点
-        keypoints_all_frames = []
-
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            # 将BGR图像转换为RGB
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # 处理图像并提取姿态关键点
-            results = pose.process(image)
-            # 收集关键点
-            if results.pose_landmarks:
-                keypoints = [(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark]
-                keypoints_all_frames.append(keypoints)
-        cap.release()
-
-        return keypoints_all_frames
-
     def load_video(self, video_path):
         data_transform = transforms.Compose([
             transforms.ToTensor(),
