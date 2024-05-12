@@ -109,8 +109,7 @@ class How2SignDataset(Dataset):
             (
                 vid,
                 torch.zeros(imgs_batch_max_len - len(vid), vid.size(1), vid.size(2), vid.size(3)).to(vid.device)
-            )
-            , dim=0)
+            ), dim=0)
             for vid in imgs_batch_tmp]
         # # 计算S3D操作后的视频掩码 TODO 考虑掩码
         # s3d_after_length = ((torch.tensor(imgs_batch_len) / 2 - 3) / 2 + 1 - 2) / 2 + 1 - 1
@@ -135,8 +134,10 @@ class How2SignDataset(Dataset):
             keypoints_batch_max_len = max(len(keypoints) for keypoints in keypoints_batch)
             # 将所有序列填充到最大长度
             keypoints_batch_padded = [torch.cat(
-                (keypoints,
-                 torch.zeros(keypoints_batch_max_len - len(keypoints), keypoints.size(1)).to(keypoints.device)),
+                (
+                    keypoints,
+                    torch.zeros(keypoints_batch_max_len - len(keypoints), keypoints.size(1)).to(keypoints.device)
+                ),
                 dim=0)
                 for keypoints in keypoints_batch]
 
