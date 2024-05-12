@@ -93,8 +93,8 @@ class How2SignDataset(Dataset):
             emo_batch_tmp.append('excited')
             tgt_batch.append(tgt_sample)
             if self.args['need_keypoints'] and other_data:
-                keypoints_sample = other_data[0]
-                print('keypoints_sample.shape: ', torch.tensor(keypoints_sample).shape)
+                keypoints_sample = torch.tensor(other_data[0])
+                print('keypoints_sample.shape: ', keypoints_sample.shape)
                 keypoints_batch.append(keypoints_sample)
 
         # 每个视频真实长度
