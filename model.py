@@ -64,7 +64,7 @@ class ImageCLIP(nn.Module):
         src = self.S3D.features(src.cuda())
         print('src.shape:', src.shape)
         src = self.S3D.avgpool(src)
-
+        print('src.shape:', src.shape)
         src = self.S3D.classifier(src)
         print('src.shape:', src.shape)
         logits = torch.mean(src, dim=(3, 4))
