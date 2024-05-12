@@ -136,7 +136,7 @@ class How2SignDataset(Dataset):
             # 将所有序列填充到最大长度
             keypoints_batch_padded = [torch.cat(
                 (keypoints,
-                 torch.zeros(keypoints_batch_max_len - len(keypoints), *keypoints.shape[1:]).to(keypoints.device)),
+                 torch.zeros(keypoints_batch_max_len - len(keypoints), keypoints.size(1)).to(keypoints.device)),
                 dim=0)
                 for keypoints in keypoints_batch]
 
