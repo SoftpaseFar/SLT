@@ -93,7 +93,14 @@ class KpsEncoder(nn.Module):
         ids = src_input['keypoints_ids'].cuda()
         print('ids.shape: ', ids.shape)
         h0 = torch.zeros(self.gru.num_layers, ids.size(0), self.gru.hidden_size).to(ids.device)
-        head, logits = self.gru(ids, h0)
+        output, h_n = self.gru(ids, h0)
+
+        # 获取最后一个时间步的隐藏状态作为head
+        head = h_n.squeeze(0)
+
+        # 将logits重塑为[batch_size, seq_len, hidden_size]
+        logits = output
+
         return head, logits
 
 
