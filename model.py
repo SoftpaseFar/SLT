@@ -52,8 +52,6 @@ class ImageCLIP(nn.Module):
         C, H, W = input_ids[0][0].size()
 
         src = torch.zeros(N, C, T, H, W)
-        # print(src.shape)
-        # print(src_input['attention_mask'])
 
         # 填充数据到s3d_input
         for i, video in enumerate(input_ids):
@@ -62,20 +60,17 @@ class ImageCLIP(nn.Module):
 
         # 移动到GPU上
         # 获取每个视频的表示，，模型推导
+        print('src.shape:', src.shape)
         src = self.S3D.features(src.cuda())
         src = self.S3D.avgpool(src)
 
         src = self.S3D.classifier(src)
+        print('src.shape:', src.shape)
         logits = torch.mean(src, dim=(3, 4))
         logits = logits.permute(0, 2, 1)
         src = torch.mean(src, dim=(2, 3, 4))
 
-        # print(src_length_batch)
-        # print(logits.shape)
-        # logits = None
-        # src = self.S3D(src)
         head = self.fc(src)
-        # print(head.shape)
 
         return head, logits
 
