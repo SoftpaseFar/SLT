@@ -62,6 +62,7 @@ class ImageCLIP(nn.Module):
         # 获取每个视频的表示，，模型推导
         print('src.shape:', src.shape)
         src = self.S3D.features(src.cuda())
+        print('src.shape:', src.shape)
         src = self.S3D.avgpool(src)
 
         src = self.S3D.classifier(src)
