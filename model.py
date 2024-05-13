@@ -40,7 +40,7 @@ class FramesFeatures(nn.Module):
                                padding=(1, 1, 1))
         self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
-        self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1))
+        self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
 
     def forward(self, input_ids):
         input_ids = input_ids.permute(0, 2, 1, 3, 4)  # 调整维度顺序为[batch_size, channels, depth, height, width]
