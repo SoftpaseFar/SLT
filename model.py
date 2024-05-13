@@ -51,6 +51,7 @@ class FramesFeatures(nn.Module):
         src = self.relu(self.conv3(src))
         src = self.pool(src)
         src = self.relu(self.conv4(src))
+        print('src未池化结果:', src.shape)
         src = self.global_avg_pool(src)  # 全局平均池化
         print('src结果:', src.shape)
         src = src.squeeze(-1).squeeze(-1)  # 去除后两个维度
