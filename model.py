@@ -94,6 +94,7 @@ class ImageCLIP(nn.Module):
 
     def forward(self, src_input):
         imgs_ids = src_input['imgs_ids'].cuda()
+        print('imgs_ids.shape:', imgs_ids.shape)
         keypoints_ids = src_input['keypoints_ids'].cuda()
         # 原始视频特这个提取
         src = self.frames_emb(imgs_ids)
