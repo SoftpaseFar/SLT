@@ -77,7 +77,7 @@ class TemporalFeatures(nn.Module):
 
 # CLIP图像编码器
 class ImageCLIP(nn.Module):
-    def __init__(self, planes=1024, frozen=False):
+    def __init__(self):
         super(ImageCLIP, self).__init__()
         # 原始视频帧提取
         self.frames_emb = FramesFeatures()
@@ -198,7 +198,7 @@ class CLIP(nn.Module):
     def __init__(self, config):
         super(CLIP, self).__init__()
         self.txt_encoder = TextCLIP(config=config)
-        self.img_encoder = ImageCLIP(planes=1024, frozen=False)
+        self.img_encoder = ImageCLIP()
 
         # logit缩放比率，可学习参数
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
@@ -245,7 +245,7 @@ class SLT(nn.Module):
     def __init__(self, config):
         super(SLT, self).__init__()
         # 视频编码器
-        self.img_encoder = ImageCLIP(planes=1024, frozen=False)
+        self.img_encoder = ImageCLIP()
         # 文本解码器
         self.txt_decoder = TextDecoder(config=config)
 
