@@ -40,7 +40,6 @@ class FramesFeatures(nn.Module):
                                padding=(1, 1, 1))
         self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
-        self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
 
     def forward(self, input_ids):
         input_ids = input_ids.permute(0, 2, 1, 3, 4)  # 调整维度顺序为[batch_size, channels, depth, height, width]
@@ -52,7 +51,8 @@ class FramesFeatures(nn.Module):
         src = self.pool(src)
         src = self.relu(self.conv4(src))
         print('src未池化结果:', src.shape)
-        src = self.global_avg_pool(src)  # 全局平均池化
+        # 对后两个维度求平均值
+        src = torch.mean(src, dim=[-2, -1])
         print('src结果:', src.shape)
         src = src.squeeze(-1).squeeze(-1)  # 去除后两个维度
         logits = src.permute(0, 2, 1)  # 将维度调整为[batch_size, depth, channels]
