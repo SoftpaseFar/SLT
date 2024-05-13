@@ -43,28 +43,17 @@ class FramesFeatures(nn.Module):
 
     def forward(self, input_ids):
         print('input_ids的维度', input_ids.shape)
-        # 将输入的视频帧序列进行特征提取
-        features = []
-        # 遍历300个视频帧
-        for i in range(input_ids.size(1)):
-            # 获取每个视频帧的特征
-            src = input_ids[:, i, :, :, :]
-            # 删除前两个维度
-            src = src.squeeze(0).squeeze(0)
-            print('更正后的维度嘻嘻：', src.shape)
-            src = self.relu(self.conv1(src))
-            src = self.pool(src)
-            src = self.relu(self.conv2(src))
-            src = self.pool(src)
-            src = self.relu(self.conv3(src))
-            src = self.pool(src)
-            src = self.relu(self.conv4(src))
-            src = self.pool(src)
-            # 将特征的维度进行调整，以适应后续的全连接层
-            src = src.view(src.size(0), -1)
-            features.append(src)
-        # 将300个视频帧的特征堆叠起来
-        logits = torch.stack(features, dim=1)
+        batch_size, depth, channels, height, width = input_ids.size()
+        input_ids = input_ids.permute(0, 2, 1, 3, 4)  # 调整维度顺序为[batch_size, channels, depth, height, width]
+        src = self.relu(self.conv1(input_ids))
+        src = self.pool(src)
+        src = self.relu(self.conv2(src))
+        src = self.pool(src)
+        src = self.relu(self.conv3(src))
+        src = self.pool(src)
+        src = self.relu(self.conv4(src))
+        logits = self.pool(src)
+        print('logits维度：', logits.shape)
         return logits
 
 
