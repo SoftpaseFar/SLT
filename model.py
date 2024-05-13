@@ -54,8 +54,8 @@ class FramesFeatures(nn.Module):
         # 对后两个维度求平均值
         src = torch.mean(src, dim=[-2, -1])
         print('src结果:', src.shape)
-        src = src.squeeze(-1).squeeze(-1)  # 去除后两个维度
-        logits = src.permute(0, 2, 1)  # 将维度调整为[batch_size, depth, channels]
+        # 将维度调整为[batch_size, depth, channels]
+        logits = src.permute(0, 2, 1)
         print('logits结果:', logits.shape)
         return logits
 
