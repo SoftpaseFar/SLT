@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 from transformers import MBartForConditionalGeneration
-from torchvision.models.video import s3d, S3D_Weights
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
 
 
