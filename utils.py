@@ -7,6 +7,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import os
 import json
+import logging
+from datetime import datetime
+from colorama import init, Back
+import yaml
 
 
 # -------
@@ -137,8 +141,33 @@ def noise_injecting(raw_gloss, noise_rate=0.15, random_shuffle=False, is_train=T
 
 # ------
 # 日志
-def log():
-    pass
+# 类型： DEBUG、INFO、WARNING、ERROR、CRITICAL 等
+def log(msg, config, file_name='', log_type="INFO", console=True, log_level=logging.INFO, **kwargs):
+    # 设置日志级别
+    logging.basicConfig(level=log_level)
+
+    # 获取当前时间
+    current_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+
+    # 构造日志信息
+    log_message = (f"[时间：{current_time}] [类型：{log_type}]\n"
+                   f"{msg}\n")
+
+    # 添加额外的元数据
+    for key, value in kwargs.items():
+        log_message += (f"[其他："
+                        f"{key}: {value}]")
+
+    # 写入日志文件
+    if config['log']['need_save']:
+        file_name = current_time + '_' + log_type + '_' + file_name
+        file_path = os.path.join(config['log']['save_path'], file_name + '.txt')
+        with open(file_path, "a") as file:
+            file.write(log_message)
+
+    # 打印到控制台
+    if console:
+        print(msg)
 
 
 # ------
@@ -265,8 +294,8 @@ def merge_json_from_subdir(subdir_path):
 
 # 保存合并后的大json文件
 def save_video_keypoints_vectors(output_file_path, vectors):
-    with open(output_file_path, 'w') as f:
-        json.dump(vectors, f)
+    with open(output_file_path, 'w') as save_file_path:
+        json.dump(vectors, save_file_path)
         print(output_file_path + ' 保存成功。')
 
 
@@ -279,5 +308,11 @@ def load_json(file_path):
 
 if __name__ == '__main__':
     # keypoints预处理
-    gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
-    pass
+    # gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
+
+    # log 测试
+    init()  # 初始化 colorama
+    # 加载参数
+    with open('./config.yaml', 'r+', encoding='utf-8') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    log(f"{Back.GREEN} Training - Epoch: {5 + 1}, CLIP loss: {0.666}, TDM Loss: {0.666} {Back.RESET}", config, 'test')

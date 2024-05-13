@@ -15,6 +15,6 @@ model:
 
 # 日志 need_save: yes or no
 log:
-  need_save: yes
+  need_save: True
   save_path: ./log
 
