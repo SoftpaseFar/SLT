@@ -176,6 +176,9 @@ def main(args_, config):
     max_accuracy = 0.0
 
     for epoch in range(args['epochs']):
+        # 在需要释放内存的地方调用
+        torch.cuda.empty_cache()
+
         # 训练一个epoch
         train_stats = train_one_epoch(args, epoch,
                                       train_dataloader,

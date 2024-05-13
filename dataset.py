@@ -156,11 +156,6 @@ class How2SignDataset(Dataset):
                                    return_tensors="pt",
                                    padding=True,
                                    truncation=True)
-        # tgt_input_attention_mask = []
-        # tgt_input = {
-        #     'input_ids': tgt_input_ids,
-        #     'attention_mask': tgt_input_attention_mask
-        # }
 
         print(f"正在加载数据集...")
 

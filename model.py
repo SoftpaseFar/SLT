@@ -105,7 +105,7 @@ class ImageCLIP(nn.Module):
         return head, logits
 
 
-# VLP阶段文本解码器
+# 文本解码器
 class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
@@ -215,9 +215,6 @@ class CLIP(nn.Module):
 
     def forward(self, src_input, tgt_input):
         img_features, _ = self.img_encoder(src_input)
-        # head, logits = self.kps_encoder(src_input)
-        # print('head：', head.shape)
-        # print('logits:', logits.shape)
 
         txt_features, self.encoder_hidden_states = self.txt_encoder(tgt_input)
 
