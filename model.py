@@ -138,15 +138,15 @@ class TextDecoder(nn.Module):
         return vocab_logits, emo_logits
 
     # SLT阶段正向反馈
-    def forward_slt(self, tgt_input, encoder_hidden_states):
+    def forward_slt(self, tgt_input, encoder_hidden_states, encoder_attention_mask):
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
                                                self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids.cuda(),
             attention_mask=tgt_input['attention_mask'].cuda(),
 
-            encoder_hidden_states=encoder_hidden_states,
-            # encoder_attention_mask=encoder_attention_mask,
+            encoder_hidden_states=encoder_hidden_states.cuda(),
+            encoder_attention_mask=encoder_attention_mask.cuda(),
 
             return_dict=True,
         )
@@ -252,7 +252,8 @@ class SLT(nn.Module):
         _, encoder_hidden_states = self.img_encoder(src_input)
         # 文本解码
         vocab_logits, emo_logits = self.txt_decoder(phase='slt', tgt_input=tgt_input,
-                                                    encoder_hidden_states=encoder_hidden_states)
+                                                    encoder_hidden_states=encoder_hidden_states,
+                                                    encoder_attention_mask=src_input['attention_mask'])
         return vocab_logits, emo_logits
 
     # generate方法待修订

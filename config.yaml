@@ -13,3 +13,8 @@ model:
   vocab_size: ./pretrain_models/MBart_ver1
 
 
+# 日志 need_save: yes or no
+log:
+  need_save: yes
+  save_path: ./log
+
