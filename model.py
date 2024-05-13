@@ -42,6 +42,7 @@ class FramesFeatures(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, input_ids):
+        print('input_ids的维度', input_ids.shape)
         # 将输入的视频帧序列进行特征提取
         features = []
         # 遍历300个视频帧
