@@ -99,8 +99,9 @@ class ImageCLIP(nn.Module):
         # 关键点信息提取
         keypoints_hidden = self.keypoints_tem(keypoints_ids)
         print('keypoints_hidden:', keypoints_hidden.shape)
-        # logits = (imgs_hidden + keypoints_hidden) / 2
-        head, logits = None, None
+        hidden = (imgs_hidden + keypoints_hidden) / 2
+        head = hidden[:, -1, :]
+        logits = hidden
         return head, logits
 
 
