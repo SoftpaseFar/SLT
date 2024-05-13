@@ -40,11 +40,11 @@ class FramesFeatures(nn.Module):
                                padding=(1, 1, 1))
         self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
+        self.global_avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
 
     def forward(self, input_ids):
-        print('input_ids的维度', input_ids.shape)
-        batch_size, depth, channels, height, width = input_ids.size()
-        input_ids = input_ids.permute(0, 2, 1, 3, 4)  # 调整维度顺序为[batch_size, channels, depth, height, width]
+        # 调整维度顺序为[batch_size, channels, depth, height, width]
+        input_ids = input_ids.permute(0, 2, 1, 3, 4)
         src = self.relu(self.conv1(input_ids))
         src = self.pool(src)
         src = self.relu(self.conv2(src))
@@ -52,8 +52,11 @@ class FramesFeatures(nn.Module):
         src = self.relu(self.conv3(src))
         src = self.pool(src)
         src = self.relu(self.conv4(src))
-        logits = self.pool(src)
-        print('logits维度：', logits.shape)
+        # 全局平均池化
+        src = self.global_avg_pool(src)
+        print('src结果:', src.shape)
+        logits = src.squeeze(-1).squeeze(-1).squeeze(-1)  # 去除多余的维度
+        print('logits结果:', logits.shape)
         return logits
 
 
