@@ -34,19 +34,19 @@ class FramesFeatures(nn.Module):
                                padding=(1, 1, 1))
         self.conv2 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=(3, 3, 3), stride=(1, 1, 1),
                                padding=(1, 1, 1))
-        self.conv3 = nn.Conv3d(in_channels=128, out_channels=512, kernel_size=(3, 3, 3), stride=(1, 1, 1),
-                               padding=(1, 1, 1))  # 修改通道数为512
-        self.conv4 = nn.Conv3d(in_channels=512, out_channels=1024, kernel_size=(3, 3, 3), stride=(1, 1, 1),
-                               padding=(1, 1, 1))  # 修改通道数为1024
+        self.conv3 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
+        self.conv4 = nn.Conv3d(in_channels=256, out_channels=1024, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
         self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
 
     def forward(self, input_ids):
-        # 将每个视频帧单独处理
-        logits = []
-        for frame in input_ids.split(1, dim=1):
-            frame = frame.squeeze(1)  # 去除batch维度
-            src = self.relu(self.conv1(frame))
+        # 将输入的视频帧序列进行特征提取
+        features = []
+        for i in range(input_ids.size(1)):  # 遍历300个视频帧
+            src = input_ids[:, i, :, :, :]  # 获取每个视频帧的特征
+            src = self.relu(self.conv1(src))
             src = self.pool(src)
             src = self.relu(self.conv2(src))
             src = self.pool(src)
@@ -55,12 +55,10 @@ class FramesFeatures(nn.Module):
             src = self.relu(self.conv4(src))
             src = self.pool(src)
             # 将特征的维度进行调整，以适应后续的全连接层
-            features = src.view(src.size(0), src.size(2), -1)
-            logits.append(features)
-
-        # 将所有视频帧的特征拼接在一起
-        logits = torch.stack(logits, dim=1)
-
+            src = src.view(src.size(0), -1)
+            features.append(src)
+        # 将300个视频帧的特征堆叠起来
+        logits = torch.stack(features, dim=1)
         return logits
 
 
@@ -87,7 +85,7 @@ class ImageCLIP(nn.Module):
         super(ImageCLIP, self).__init__()
         # 原始视频帧提取
         self.frames_emb = FramesFeatures()
-        self.frames_tem = TemporalFeatures(input_size=512)
+        self.frames_tem = TemporalFeatures(input_size=1024)
 
         # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
         self.keypoints_tem = TemporalFeatures(input_size=411)
