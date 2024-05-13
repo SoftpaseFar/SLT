@@ -46,6 +46,10 @@ class How2SignDataset(Dataset):
 
     def _load_keypoints(self, path):
         video_vectors = utils.load_json(path)
+        # 如果关键点向量数量超过最大长度，随机抽取最大长度的关键点向量，并保持顺序
+        # if len(video_vectors) > self.max_length:
+        #     video_vectors = [video_vectors[i] for i in
+        #                      sorted(random.sample(range(len(video_vectors)), self.max_length))]
         return video_vectors
 
     def _load_video(self, video_path):
@@ -64,8 +68,9 @@ class How2SignDataset(Dataset):
         cap.release()
 
         # 如果帧数超过最大长度，随机抽取max_length帧
-        if len(frames) > self.max_length:
-            frames = [frames[i] for i in sorted(random.sample(range(len(frames)), self.max_length))]
+        # if len(frames) > self.max_length:
+        #     frames = [frames[i] for i in
+        #               sorted(random.sample(range(len(frames)), self.max_length))]
 
         imgs = torch.zeros(len(frames), 3, self.args['input_size'], self.args['input_size'])
         crop_rect, resize = utils.data_augmentation(resize=(self.args['resize'], self.args['resize']),
@@ -147,7 +152,7 @@ class How2SignDataset(Dataset):
             # 将填充后的序列堆叠成张量
             keypoints_batch_tensor = torch.stack(keypoints_batch_padded, dim=0)
             src_input['keypoints_ids'] = keypoints_batch_tensor
-            print("src_input['keypoints_ids'].shape: ", src_input['keypoints_ids'].shape)
+            print("keypoints_ids.shape: ", src_input['keypoints_ids'].shape)
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充

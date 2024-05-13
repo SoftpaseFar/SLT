@@ -50,14 +50,12 @@ class FramesFeatures(nn.Module):
         src = self.relu(self.conv3(src))
         src = self.pool(src)
         src = self.relu(self.conv4(src))
-        print('src未池化结果:', src.shape)
         # 对后两个维度求平均值
         src = torch.mean(src, dim=[-2, -1])
-        print('src结果:', src.shape)
         # 将维度调整为[batch_size, depth, channels]
-        logits = src.permute(0, 2, 1)
-        print('logits结果:', logits.shape)
-        return logits
+        features = src.permute(0, 2, 1)
+        print('features.shape:', features.shape)
+        return features
 
 
 # 时间特征提取；
@@ -72,9 +70,9 @@ class TemporalFeatures(nn.Module):
     def forward(self, input_ids):
         ids = input_ids.cuda()
         h0 = torch.zeros(self.gru.num_layers, ids.size(0), self.gru.hidden_size).to(ids.device)
-        logits, _ = self.gru(ids, h0)
+        hidden, _ = self.gru(ids, h0)
 
-        return logits
+        return hidden
 
 
 # CLIP图像编码器
@@ -93,14 +91,14 @@ class ImageCLIP(nn.Module):
         print('imgs_ids.shape:', imgs_ids.shape)
         keypoints_ids = src_input['keypoints_ids'].cuda()
         # 原始视频特这个提取
-        src = self.frames_emb(imgs_ids)
-        imgs_logits = self.frames_tem(src)
-        print('imgs_logits:', imgs_logits.shape)
+        imgs_features = self.frames_emb(imgs_ids)
+        imgs_hidden = self.frames_tem(imgs_features)
+        print('imgs_hidden:', imgs_hidden.shape)
 
         # 关键点信息提取
-        keypoints_logits = self.keypoints_tem(keypoints_ids)
-        print('keypoints_logits:', keypoints_logits.shape)
-        logits = (imgs_logits + keypoints_logits) / 2
+        keypoints_hidden = self.keypoints_tem(keypoints_ids)
+        print('keypoints_hidden:', keypoints_hidden.shape)
+        # logits = (imgs_hidden + keypoints_hidden) / 2
         head, logits = None, None
         return head, logits
 
