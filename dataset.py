@@ -152,7 +152,6 @@ class How2SignDataset(Dataset):
             # 将填充后的序列堆叠成张量
             keypoints_batch_tensor = torch.stack(keypoints_batch_padded, dim=0)
             src_input['keypoints_ids'] = keypoints_batch_tensor
-            print("keypoints_ids.shape: ", src_input['keypoints_ids'].shape)
 
         # 将一个batch的文本进行tokenizer
         # 对于批次中不同长度的文本进行填充
