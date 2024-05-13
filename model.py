@@ -44,8 +44,13 @@ class FramesFeatures(nn.Module):
     def forward(self, input_ids):
         # 将输入的视频帧序列进行特征提取
         features = []
-        for i in range(input_ids.size(1)):  # 遍历300个视频帧
-            src = input_ids[:, i, :, :, :]  # 获取每个视频帧的特征
+        # 遍历300个视频帧
+        for i in range(input_ids.size(1)):
+            # 获取每个视频帧的特征
+            src = input_ids[:, i, :, :, :]
+            # 删除前两个维度
+            src = src.squeeze(0).squeeze(0)
+            print('更正后的维度嘻嘻：', src.shape)
             src = self.relu(self.conv1(src))
             src = self.pool(src)
             src = self.relu(self.conv2(src))
