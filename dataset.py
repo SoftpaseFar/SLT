@@ -111,6 +111,9 @@ class How2SignDataset(Dataset):
                 torch.zeros(imgs_batch_max_len - len(vid), vid.size(1), vid.size(2), vid.size(3)).to(vid.device)
             ), dim=0)
             for vid in imgs_batch_tmp]
+
+        imgs_batch = torch.stack(imgs_batch, dim=0)
+
         # # 计算S3D操作后的视频掩码 TODO 考虑掩码
         # s3d_after_length = ((torch.tensor(imgs_batch_len) / 2 - 3) / 2 + 1 - 2) / 2 + 1 - 1
         # s3d_after_length = s3d_after_length.long()
@@ -123,7 +126,7 @@ class How2SignDataset(Dataset):
         # img_padding_mask = (mask_gen != PAD_IDX).long()
 
         src_input = {
-            'input_ids': imgs_batch,
+            'imgs_ids': imgs_batch,
             # 'attention_mask': img_padding_mask,
 
             'src_length_batch': imgs_batch_max_len}

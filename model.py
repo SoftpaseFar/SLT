@@ -26,78 +26,76 @@ class TextCLIP(nn.Module):
         return self.lm_head(emo_voca_emb), logits
 
 
-# CLIP图像编码器
-class ImageCLIP(nn.Module):
-    def __init__(self, planes=1024, frozen=False):
-        super(ImageCLIP, self).__init__()
-        # 视频帧特征提取
-        self.S3D = s3d(weights=S3D_Weights.KINETICS400_V1)
+# 原始视频帧特征提取 Frames embedding -> Frames Features
+class FramesFeatures(nn.Module):
+    def __init__(self):
+        super(FramesFeatures, self).__init__()
+        self.conv1 = nn.Conv3d(in_channels=3, out_channels=64, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
+        self.conv2 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
+        self.conv3 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
+        self.conv4 = nn.Conv3d(in_channels=256, out_channels=512, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
+        self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+        self.relu = nn.ReLU()
 
-        # 移除S3D的分类器部分，只保留到avg pool的部分
-        self.S3D.classifier = nn.Identity()
-        # 是否冻结S3D参数
-        if frozen:
-            for param in self.S3D.parameters():
-                param.requires_grad = False
-
-        # 对接线性层，充当head
-        self.fc = nn.Linear(1024, planes)
-
-    def forward(self, src_input):
-        input_ids, src_length_batch = src_input['input_ids'], src_input['src_length_batch']
-        print('input_ids[0].shape:', input_ids[0].shape)
-
-        # 构建S3D的输入格式
-        N = len(src_input['input_ids'])
-        T = src_length_batch
-        C, H, W = input_ids[0][0].size()
-
-        src = torch.zeros(N, C, T, H, W)
-
-        # 填充数据到s3d_input
-        for i, video in enumerate(input_ids):
-            for j, frame in enumerate(video):
-                src[i, :, j, :, :] = frame
-
-        # 移动到GPU上
-        # 获取每个视频的表示，，模型推导
-        print('src.shape:', src.shape)
-        src = self.S3D.features(src.cuda())
-        print('src.shape:', src.shape)
-        src = self.S3D.avgpool(src)
-
-        src = self.S3D.classifier(src)
-        print('src.shape:', src.shape)
-        logits = torch.mean(src, dim=(3, 4))
-        logits = logits.permute(0, 2, 1)
-        src = torch.mean(src, dim=(2, 3, 4))
-
-        head = self.fc(src)
-
-        return head, logits
+    def forward(self, input_ids):
+        src = self.relu(self.conv1(input_ids))
+        src = self.pool(src)
+        src = self.relu(self.conv2(src))
+        src = self.pool(src)
+        src = self.relu(self.conv3(src))
+        src = self.pool(src)
+        src = self.relu(self.conv4(src))
+        src = self.pool(src)
+        # 将特征的维度进行调整，以适应后续的全连接层
+        logits = src.view(src.size(0), src.size(2), -1)
+        return logits
 
 
-# keypoints 特征提取, Keypoints Embedding -> KpsEncoder
-class KpsEncoder(nn.Module):
-    def __init__(self, input_size=411, hidden_size=1024, num_layers=1, batch_first=True):
-        super(KpsEncoder, self).__init__()
+# 时间特征提取；
+class TemporalFeatures(nn.Module):
+    def __init__(self, input_size=512, hidden_size=1024, num_layers=1, batch_first=True):
+        super(TemporalFeatures, self).__init__()
         self.gru = nn.GRU(input_size=input_size,
                           hidden_size=hidden_size,
                           num_layers=num_layers,
                           batch_first=batch_first)
 
-    def forward(self, src_input):
-        ids = src_input['keypoints_ids'].cuda()
-        print('ids.shape: ', ids.shape)
+    def forward(self, input_ids):
+        ids = input_ids.cuda()
         h0 = torch.zeros(self.gru.num_layers, ids.size(0), self.gru.hidden_size).to(ids.device)
-        output, h_n = self.gru(ids, h0)
+        logits, _ = self.gru(ids, h0)
 
-        # 获取最后一个时间步的隐藏状态作为head
-        head = h_n.squeeze(0)
+        return logits
 
-        # 将logits重塑为[batch_size, seq_len, hidden_size]
-        logits = output
 
+# CLIP图像编码器
+class ImageCLIP(nn.Module):
+    def __init__(self, planes=1024, frozen=False):
+        super(ImageCLIP, self).__init__()
+        # 原始视频帧提取
+        self.frames_emb = FramesFeatures()
+        self.frames_tem = TemporalFeatures(input_size=512)
+
+        # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
+        self.keypoints_tem = TemporalFeatures(input_size=411)
+
+    def forward(self, src_input):
+        imgs_ids = src_input['imgs_ids'].cuda()
+        keypoints_ids = src_input['keypoints_ids'].cuda()
+        # 原始视频特这个提取
+        src = self.frames_emb(imgs_ids)
+        imgs_logits = self.frames_tem(src)
+        print('imgs_logits:', imgs_logits.shape)
+
+        # 关键点信息提取
+        keypoints_logits = self.keypoints_tem(keypoints_ids)
+        print('keypoints_logits:', keypoints_logits.shape)
+        logits = (imgs_logits + keypoints_logits) / 2
+        head, logits = None, None
         return head, logits
 
 
@@ -194,7 +192,6 @@ class CLIP(nn.Module):
         super(CLIP, self).__init__()
         self.txt_encoder = TextCLIP(config=config)
         self.img_encoder = ImageCLIP(planes=1024, frozen=False)
-        self.kps_encoder = KpsEncoder()
 
         # logit缩放比率，可学习参数
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
@@ -212,9 +209,9 @@ class CLIP(nn.Module):
 
     def forward(self, src_input, tgt_input):
         img_features, _ = self.img_encoder(src_input)
-        head, logits = self.kps_encoder(src_input)
-        print('head：', head.shape)
-        print('logits:', logits.shape)
+        # head, logits = self.kps_encoder(src_input)
+        # print('head：', head.shape)
+        # print('logits:', logits.shape)
 
         txt_features, self.encoder_hidden_states = self.txt_encoder(tgt_input)
 
