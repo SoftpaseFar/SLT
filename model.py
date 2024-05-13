@@ -30,7 +30,7 @@ class TextCLIP(nn.Module):
 class ImageCLIP(nn.Module):
     def __init__(self, planes=1024, frozen=False):
         super(ImageCLIP, self).__init__()
-        # 获取预训练的S3D,提取视频特征和时间信息
+        # 视频帧特征提取
         self.S3D = s3d(weights=S3D_Weights.KINETICS400_V1)
 
         # 移除S3D的分类器部分，只保留到avg pool的部分
@@ -45,6 +45,7 @@ class ImageCLIP(nn.Module):
 
     def forward(self, src_input):
         input_ids, src_length_batch = src_input['input_ids'], src_input['src_length_batch']
+        print('input_ids[0].shape:', input_ids[0].shape)
 
         # 构建S3D的输入格式
         N = len(src_input['input_ids'])
@@ -64,7 +65,7 @@ class ImageCLIP(nn.Module):
         src = self.S3D.features(src.cuda())
         print('src.shape:', src.shape)
         src = self.S3D.avgpool(src)
-        print('src.shape:', src.shape)
+
         src = self.S3D.classifier(src)
         print('src.shape:', src.shape)
         logits = torch.mean(src, dim=(3, 4))
