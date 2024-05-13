@@ -91,6 +91,7 @@ class ImageCLIP(nn.Module):
         print('【测试】imgs_ids.shape:', imgs_ids.shape)
         keypoints_ids = src_input['keypoints_ids'].cuda()
         print('【测试】keypoints_ids.shape:', keypoints_ids.shape)
+        print('【测试】attention_mask.shape:', src_input['attention_mask'].shape)
         # 原始视频特这个提取
         imgs_features = self.frames_emb(imgs_ids)
         imgs_hidden = self.frames_tem(imgs_features)

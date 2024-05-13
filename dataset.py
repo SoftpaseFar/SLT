@@ -47,9 +47,9 @@ class How2SignDataset(Dataset):
     def _load_keypoints(self, path):
         video_vectors = utils.load_json(path)
         # 如果关键点向量数量超过最大长度，随机抽取最大长度的关键点向量，并保持顺序
-        # if len(video_vectors) > self.max_length:
-        #     video_vectors = [video_vectors[i] for i in
-        #                      sorted(random.sample(range(len(video_vectors)), self.max_length))]
+        if len(video_vectors) > self.max_length:
+            video_vectors = [video_vectors[i] for i in
+                             sorted(random.sample(range(len(video_vectors)), self.max_length))]
         return video_vectors
 
     def _load_video(self, video_path):
@@ -68,9 +68,9 @@ class How2SignDataset(Dataset):
         cap.release()
 
         # 如果帧数超过最大长度，随机抽取max_length帧
-        # if len(frames) > self.max_length:
-        #     frames = [frames[i] for i in
-        #               sorted(random.sample(range(len(frames)), self.max_length))]
+        if len(frames) > self.max_length:
+            frames = [frames[i] for i in
+                      sorted(random.sample(range(len(frames)), self.max_length))]
 
         imgs = torch.zeros(len(frames), 3, self.args['input_size'], self.args['input_size'])
         crop_rect, resize = utils.data_augmentation(resize=(self.args['resize'], self.args['resize']),
@@ -119,20 +119,15 @@ class How2SignDataset(Dataset):
 
         imgs_batch = torch.stack(imgs_batch, dim=0)
 
-        # # 计算S3D操作后的视频掩码 TODO 考虑掩码
-        # s3d_after_length = ((torch.tensor(imgs_batch_len) / 2 - 3) / 2 + 1 - 2) / 2 + 1 - 1
-        # s3d_after_length = s3d_after_length.long()
-        # print(s3d_after_length)
-        # mask_gen = []
-        # for i in s3d_after_length:
-        #     tmp = torch.ones([i]) + 7
-        #     mask_gen.append(tmp)
-        # mask_gen = pad_sequence(mask_gen, padding_value=PAD_IDX, batch_first=True)
-        # img_padding_mask = (mask_gen != PAD_IDX).long()
+        # 视频序列掩码
+        img_padding_mask = torch.tensor(
+            [[1] * length + [0] * (imgs_batch_max_len - length) for length in imgs_batch_len],
+            dtype=torch.long
+        )
 
         src_input = {
             'imgs_ids': imgs_batch,
-            # 'attention_mask': img_padding_mask,
+            'attention_mask': img_padding_mask,
 
             'src_length_batch': imgs_batch_max_len}
 
