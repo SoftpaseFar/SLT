@@ -233,6 +233,8 @@ def tokenizer(words):
 # ------
 # 将视频多个json合并成一个表征视频的vectors
 def gen_videos_vectors(pending_dir='', output_dir=''):
+    # 如果存在output_dir，清空其下的所有内容 [这个逻辑也可以不要]
+
     # 遍历 pending_keypoints 目录下的所有子目录
     for subdir in os.listdir(pending_dir):
         output_filename = subdir + '.json'
