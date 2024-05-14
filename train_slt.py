@@ -273,16 +273,16 @@ def train_one_epoch(args, epoch,
         # loss_lambda = torch.tensor(args['loss_lambda'])
         vocab_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
                                   tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
-        emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+        emo_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
         # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
         print(
             f"{Back.GREEN}"
             f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
-            f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+            f"emo_lm_loss: {emo_lm_loss}"
             f"{Back.RESET}")
 
-        vocab_emo_loss = torch.stack([vocab_lm_loss, emo_masked_lm_loss])
+        vocab_emo_loss = torch.stack([vocab_lm_loss, emo_lm_loss])
         vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
         # 梯度清零 梯度回传 更新梯度
         slt_train_dict['optimizer'].zero_grad()
@@ -342,16 +342,16 @@ def evaluate_one_epoch(args, epoch,
             # loss_lambda = torch.tensor(args['loss_lambda'])
             vocab_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
                                       tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
-            emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+            emo_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
             # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
             print(
                 f"{Back.GREEN}"
                 f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
-                f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                f"emo_lm_loss: {emo_lm_loss}"
                 f"{Back.RESET}")
 
-            vocab_emo_loss = torch.stack([vocab_lm_loss, emo_masked_lm_loss])
+            vocab_emo_loss = torch.stack([vocab_lm_loss, emo_lm_loss])
             vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
             vocab_emo_losses.append(vocab_emo_loss.item())
 
