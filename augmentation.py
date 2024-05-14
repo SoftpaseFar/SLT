@@ -2,7 +2,6 @@ from PIL import Image
 from PIL import ImageEnhance
 import PIL
 import random
-import numpy as np
 
 
 class Brightness(object):

@@ -73,6 +73,8 @@ def get_args_parser():
     a_parser.add_argument('--eval', default=False, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
+
+    a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
     return a_parser
 
 
@@ -199,9 +201,13 @@ def main(args_, config):
                                        slt_train_dict,
                                        criterion,
                                        tokenizer)
+
         utils.log(
             f"{Back.GREEN}"
-            f"Evaluation - Epoch: {epoch + 1}, avg_vocab_emo_loss: {val_stats['avg_vocab_emo_loss']}，bleu_s：{val_stats['bleu_s']}"
+            f"Evaluation - Epoch: {epoch + 1}, avg_vocab_emo_loss: {val_stats['avg_vocab_emo_loss']},"
+            f"emo_accuracy：{val_stats['emo_accuracy']},"
+            f"vocab_bleu_s：{val_stats['vocab_bleu_s']},"
+            f"integrated_score：{val_stats['integrated_score']},"
             f"{Back.RESET}",
             config,
             'train_stats'
@@ -297,7 +303,11 @@ def evaluate_one_epoch(args, epoch,
     slt_train_dict['slt_model'].eval()
 
     with (torch.no_grad()):
-        # 生成序列 参考序列
+        # 情感部分 生成情感 参考情感
+        emo_pres = []
+        emo_refs = []
+
+        # 翻译部分 生成序列 参考序列
         tgt_pres = []
         tgt_refs = []
 
@@ -334,6 +344,17 @@ def evaluate_one_epoch(args, epoch,
 
             avg_vocab_emo_loss = sum(vocab_emo_losses) / len(vocab_emo_losses) if vocab_emo_losses else 0
 
+            # 情感准确率计算数据准备
+            # 使用 tokenizer 解码每个样本
+            one_batch_emo_pres = utils.batch_decode(torch.argmax(vocab_logits[:, 0, :], dim=-1))
+            one_batch_emo_refs = utils.batch_decode(tgt_input['input_ids'][:, 0])
+
+            print(f"Epoch {epoch + 1} val, Step {step}, one_batch_emo_pres: {one_batch_emo_pres}")
+            print(f"Epoch {epoch + 1} val, Step {step}, one_batch_emo_refs: {one_batch_emo_refs}")
+            emo_pres.extend(one_batch_emo_pres)
+            emo_refs.extend(one_batch_emo_refs)
+
+            # BLEU分数计算数据准备
             # 使用 tokenizer 解码每个样本
             one_batch_tgt_pres = tokenizer.batch_decode(torch.argmax(vocab_logits[:, 1:, :], dim=-1),
                                                         skip_special_tokens=True)
@@ -346,14 +367,20 @@ def evaluate_one_epoch(args, epoch,
             tgt_pres.extend(one_batch_tgt_pres)
             tgt_refs.extend(one_batch_tgt_refs)
 
-        # 评测指标计算
+        # 情感评估指标计算 TODO
+        emo_accuracy = 0.0
+
+        # 翻译评测指标计算
         bleu = BLEU()
-        bleu_s = bleu.corpus_score(tgt_pres, [tgt_refs]).score
-        print(f"Epoch {epoch + 1} val, bleu_s:{bleu_s}")
+        vocab_bleu_s = bleu.corpus_score(tgt_pres, [tgt_refs]).score
+
+        integrated_score = emo_accuracy * args['lambda'] + vocab_bleu_s * (1 - args['lambda'])
 
     val_stats = {
         'avg_vocab_emo_loss': avg_vocab_emo_loss,
-        'bleu_s': bleu_s
+        'emo_accuracy': emo_accuracy,
+        'vocab_bleu_s': vocab_bleu_s,
+        'integrated_score': integrated_score
     }
 
     return val_stats

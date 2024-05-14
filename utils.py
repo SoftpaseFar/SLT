@@ -262,6 +262,11 @@ def tokenizer(words):
     return [emo_vocab.get(word, 0) for word in words]
 
 
+# 情感ids解码
+def batch_decode(ids):
+    print('自定义加码器:', ids)
+
+
 # ------
 # 将视频多个json合并成一个表征视频的vectors
 def gen_videos_vectors(pending_dir='', output_dir=''):
