@@ -213,7 +213,7 @@ def main(args_, config):
             'train_stats'
         )
 
-        if max_accuracy <= val_stats["integrated_score"]:
+        if max_accuracy < val_stats["integrated_score"]:
             max_accuracy = val_stats["integrated_score"]
             # 保存模型
             if args['save_model'] and epoch % args['save_interval'] == 0:
