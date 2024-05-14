@@ -260,6 +260,11 @@ def train_one_epoch(args, epoch, dataloader,
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
 
+        # 解码器损失权重分配
+        vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+        emo_weight = 1 / len(tgt_input['input_ids'])
+        masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+
         # 刷新梯度
         clip_train_dict['optimizer'].zero_grad()
         # 采用自动混合精度
@@ -287,7 +292,14 @@ def train_one_epoch(args, epoch, dataloader,
 
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
-                masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
+                print(
+                    f"{Back.GREEN}"
+                    f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
+                    f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                    f"{Back.RESET}")
+
+                masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
+                masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
                 # 根据梯度模型参数
                 loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
                 tdm_losses.append(masked_lm_loss.item())
@@ -327,6 +339,12 @@ def evaluate_one_epoch(args, epoch, dataloader,
     with torch.no_grad():
         for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
             print(f"Epoch {epoch + 1} val, Step {step + 1}...")
+
+            # 解码器损失权重分配
+            vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+            emo_weight = 1 / len(tgt_input['input_ids'])
+            masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+
             # 采用自动混合精度
             with torch.cuda.amp.autocast():
                 # clip 部分
@@ -350,7 +368,14 @@ def evaluate_one_epoch(args, epoch, dataloader,
                 emo_masked_lm_loss = criterion['loss_ce'](emo_logits,
                                                           tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
-                masked_lm_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
+                print(
+                    f"{Back.GREEN}"
+                    f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
+                    f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                    f"{Back.RESET}")
+
+                masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
+                masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
 
                 tdm_losses.append(masked_lm_loss.item())
 
