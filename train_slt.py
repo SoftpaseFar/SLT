@@ -237,7 +237,6 @@ def train_one_epoch(args, epoch,
 
     for step, (src_input, tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
-        print('看看有没有：', src_input['attention_mask'])
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
         loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])

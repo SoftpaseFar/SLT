@@ -158,11 +158,11 @@ class TextDecoder(nn.Module):
 
     def forward(self, phase=None, tgt_input=None,
                 masked_tgt_input=None, txt_encoder=None,
-                encoder_hidden_states=None):
+                encoder_hidden_states=None, encoder_attention_mask=None):
         if phase == 'clip':
             return self.forward_clip(tgt_input, masked_tgt_input, txt_encoder)
         elif phase == 'slt':
-            return self.forward_slt(tgt_input, encoder_hidden_states)
+            return self.forward_slt(tgt_input, encoder_hidden_states, encoder_attention_mask)
         else:
             raise ValueError("参数错误")
 
@@ -246,7 +246,6 @@ class SLT(nn.Module):
         self.txt_decoder = TextDecoder(config=config)
 
     def forward(self, src_input, tgt_input):
-        print('测试】attention_mask', src_input['attention_mask'].shape)
         # 视频编码
         _, encoder_hidden_states = self.img_encoder(src_input)
         # 文本解码
