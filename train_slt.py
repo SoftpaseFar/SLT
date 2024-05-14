@@ -164,6 +164,8 @@ def main(args_, config):
     loss_scaler = NativeScaler()
 
     # 数据增强 TODO
+    # 内存优化 TODO
+    # 日志优化 TODO
 
     # 评估模式 TODO
     if args['eval']:
@@ -185,7 +187,9 @@ def main(args_, config):
                                       slt_train_dict,
                                       criterion, loss_scaler)
         utils.log(
-            f"{Back.GREEN}Training - Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}{Back.RESET}",
+            f"{Back.GREEN}"
+            f"Training - Epoch: {epoch + 1}, Avg_Vocab_Emo Loss: {train_stats['avg_vocab_emo_loss']}"
+            f"{Back.RESET}",
             config,
             'train_stats')
 
@@ -196,7 +200,9 @@ def main(args_, config):
                                        criterion,
                                        tokenizer)
         utils.log(
-            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}{Back.RESET}",
+            f"{Back.GREEN}"
+            f"Evaluation - Epoch: {epoch + 1}, avg_vocab_emo_loss: {val_stats['avg_vocab_emo_loss']}，bleu_s：{val_stats['bleu_s']}"
+            f"{Back.RESET}",
             config,
             'train_stats'
         )
@@ -237,6 +243,11 @@ def train_one_epoch(args, epoch,
 
     for step, (src_input, tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
+        # 解码器损失权重分配
+        vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+        emo_weight = 1 / len(tgt_input['input_ids'])
+        masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
         loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
@@ -245,7 +256,15 @@ def train_one_epoch(args, epoch,
                                   tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
         emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
-        vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
+        # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
+        print(
+            f"{Back.GREEN}"
+            f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
+            f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+            f"{Back.RESET}")
+
+        vocab_emo_loss = torch.stack([vocab_lm_loss, emo_masked_lm_loss])
+        vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
         # 梯度清零 梯度回传 更新梯度
         slt_train_dict['optimizer'].zero_grad()
         # 使用loss_scaler的__call__方法进行损失的缩放和梯度更新
@@ -263,7 +282,7 @@ def train_one_epoch(args, epoch,
     avg_vocab_emo_loss = sum(vocab_emo_losses) / len(vocab_emo_losses) if vocab_emo_losses else 0
 
     # 用于返回的状态字典
-    train_stats = {'vocab_emo_loss': avg_vocab_emo_loss}
+    train_stats = {'avg_vocab_emo_loss': avg_vocab_emo_loss}
     return train_stats
 
 
@@ -283,21 +302,38 @@ def evaluate_one_epoch(args, epoch,
         tgt_refs = []
 
         # 整体损失
-        total_loss = 0.0
+        vocab_emo_losses = []
 
         for step, (src_input, tgt_input) in enumerate(dataloader):
             print(f"Epoch {epoch + 1} val, Step {step}...")
+
+            # 解码器损失权重分配
+            vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+            emo_weight = 1 / len(tgt_input['input_ids'])
+            masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+
             # 计算损失
             vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
             loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
             # loss_lambda = torch.tensor(args['loss_lambda'])
-            vocab_masked_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                             tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+            vocab_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
+                                      tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
             emo_masked_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
-            vocab_emo_loss = (vocab_masked_lm_loss + emo_masked_lm_loss) / 2
-            total_loss += vocab_emo_loss
+            # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
+            print(
+                f"{Back.GREEN}"
+                f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
+                f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                f"{Back.RESET}")
+
+            vocab_emo_loss = torch.stack([vocab_lm_loss, emo_masked_lm_loss])
+            vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
+            vocab_emo_losses.append(vocab_emo_loss.item())
+
+            avg_vocab_emo_loss = sum(vocab_emo_losses) / len(vocab_emo_losses) if vocab_emo_losses else 0
+
             # 使用 tokenizer 解码每个样本
             one_batch_tgt_pres = tokenizer.batch_decode(torch.argmax(vocab_logits[:, 1:, :], dim=-1),
                                                         skip_special_tokens=True)
@@ -314,8 +350,9 @@ def evaluate_one_epoch(args, epoch,
         bleu = BLEU()
         bleu_s = bleu.corpus_score(tgt_pres, [tgt_refs]).score
         print(f"Epoch {epoch + 1} val, bleu_s:{bleu_s}")
+
     val_stats = {
-        'total_loss': total_loss,
+        'avg_vocab_emo_loss': avg_vocab_emo_loss,
         'bleu_s': bleu_s
     }
 

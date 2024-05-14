@@ -191,7 +191,9 @@ def main(args_, config):
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
         utils.log(
-            f"{Back.GREEN}Training - Epoch: {epoch + 1}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}",
+            f"{Back.GREEN}"
+            f"Training - Epoch: {epoch + 1}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}"
+            f"{Back.RESET}",
             config,
             'train_stats')
         # 评估一个epoch
@@ -199,7 +201,9 @@ def main(args_, config):
                                        clip_train_dict, td_train_dict,
                                        criterion)
         utils.log(
-            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}",
+            f"{Back.GREEN}"
+            f"Evaluation - Epoch: {epoch + 1}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}"
+            f"{Back.RESET}",
             config,
             'val_stats')
         val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
