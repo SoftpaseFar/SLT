@@ -69,7 +69,7 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--finetune', default=False, type=bool)
+    a_parser.add_argument('--finetune', default=True, type=bool)
     a_parser.add_argument('--eval', default=False, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
@@ -140,13 +140,25 @@ def main(args_, config):
                                  pin_memory=args['pin_mem'],
                                  drop_last=True)
 
-    # 模型微调,参数加载 TODO
-    if args['finetune']:
-        pass
-
     # SLT Model
     slt_model = SLT(config=config)
     slt_model.to(device)
+
+    # VLP阶段权重加载
+    if args['finetune']:
+        print("加载VLP模型权重...")
+        # 加载模型1的检查点
+        checkpoint = torch.load(config['model']['vlp_cps'])
+
+        # 获取模型1的权重参数
+        clip_model_state_dict = checkpoint['clip_train_dict']['clip_model']
+        txt_decoder_state_dict = checkpoint['td_train_dict']['txt_decoder']
+
+        # 将模型1的权重参数加载到模型2中
+        # 严格模式设置为False以允许不匹配的参数
+        slt_model.load_state_dict(clip_model_state_dict, strict=False)
+        slt_model.load_state_dict(txt_decoder_state_dict, strict=False)
+        print("VLP模型权重应用到SLT完成.")
 
     # 优化器 学习率调度器
     optimizer = create_optimizer(args_, slt_model)
@@ -227,7 +239,8 @@ def main(args_, config):
                     'train_stats': train_stats,
                     'val_stats': val_stats,
                     'max_accuracy': max_accuracy
-                }, args=args, filename=f"slt_checkpoint_{epoch + 1}.pth.tar")
+                }, args=args, filename=f"slt_checkpoint.pth.tar")
+                # log记录 TODO
 
         print(f'当前最优{Back.GREEN} Blue-4分数: {max_accuracy:.2f}%{Back.RESET}')
 

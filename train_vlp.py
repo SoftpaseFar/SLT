@@ -231,7 +231,8 @@ def main(args_, config):
                     'train_stats': train_stats,
                     'val_stats': val_stats,
                     'best_loss': val_loss
-                }, args=args, filename=f"vlp_checkpoint_{epoch + 1}.pth.tar")
+                }, args=args, filename=f"vlp_checkpoint.pth.tar")
+                # log记录 TODO
 
         else:
             patience_counter += 1

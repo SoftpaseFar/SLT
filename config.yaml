@@ -11,6 +11,7 @@ data:
 model:
   name: facebook/mbart-large-cc25
   vocab_size: ./pretrain_models/MBart_ver1
+  vlp_cps: ./checkpoints/vlp_checkpoint.pth.tar
 
 
 # 日志 need_save: yes or no
