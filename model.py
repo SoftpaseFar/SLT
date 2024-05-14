@@ -246,8 +246,7 @@ class SLT(nn.Module):
         self.txt_decoder = TextDecoder(config=config)
 
     def forward(self, src_input, tgt_input):
-        # print(src_input['input_ids'][0].shape)
-        # print(tgt_input['input_ids'].shape)
+        print('测试】attention_mask', src_input['attention_mask'].shape)
         # 视频编码
         _, encoder_hidden_states = self.img_encoder(src_input)
         # 文本解码

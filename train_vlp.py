@@ -190,14 +190,18 @@ def main(args_, config):
         train_stats = train_one_epoch(args, epoch, train_dataloader,
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
-        print(
-            f"{Back.GREEN}Training - Epoch: {epoch + 1}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}")
+        utils.log(
+            f"{Back.GREEN}Training - Epoch: {epoch + 1}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}{Back.RESET}",
+            config,
+            'train_stats')
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
-        print(
-            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}")
+        utils.log(
+            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}{Back.RESET}",
+            config,
+            'val_stats')
         val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
 
         # 检查是否有新的最低验证损失

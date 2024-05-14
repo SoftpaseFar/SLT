@@ -184,8 +184,10 @@ def main(args_, config):
                                       train_dataloader,
                                       slt_train_dict,
                                       criterion, loss_scaler)
-        print(
-            f"{Back.GREEN}Training - Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}{Back.RESET}")
+        utils.log(
+            f"{Back.GREEN}Training - Epoch: {epoch + 1}, Vocab_Emo Loss: {train_stats['vocab_emo_loss']}{Back.RESET}",
+            config,
+            'train_stats')
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -193,8 +195,11 @@ def main(args_, config):
                                        slt_train_dict,
                                        criterion,
                                        tokenizer)
-        print(
-            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}{Back.RESET}")
+        utils.log(
+            f"{Back.GREEN}Evaluation - Epoch: {epoch + 1}, total_loss: {val_stats['total_loss']}，bleu_s： {val_stats['bleu_s']}{Back.RESET}",
+            config,
+            'train_stats'
+        )
 
         if max_accuracy < val_stats["bleu_s"]:
             max_accuracy = val_stats["bleu_s"]
