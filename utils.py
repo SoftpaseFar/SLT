@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 from colorama import init, Back
 import yaml
+from gensim.models import Word2Vec
 
 
 # -------
@@ -265,6 +266,7 @@ def tokenizer(words):
 # 情感ids解码
 def batch_decode(ids):
     print('自定义加码器:', ids)
+    return 'excited'
 
 
 # ------
