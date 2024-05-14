@@ -11,7 +11,6 @@ import logging
 from datetime import datetime
 from colorama import init, Back
 import yaml
-from gensim.models import Word2Vec
 
 
 # -------
