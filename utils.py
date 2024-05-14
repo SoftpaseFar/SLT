@@ -316,11 +316,11 @@ def load_json(file_path):
 
 if __name__ == '__main__':
     # keypoints预处理
-    # gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
+    gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
 
-    # log 测试
-    init()  # 初始化 colorama
-    # 加载参数
-    with open('./config.yaml', 'r+', encoding='utf-8') as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    log(f"{Back.GREEN} Training - Epoch: {5 + 1}, CLIP loss: {0.666}, TDM Loss: {0.666} {Back.RESET}", config, 'test')
+    # # log 测试
+    # init()  # 初始化 colorama
+    # # 加载参数
+    # with open('./config.yaml', 'r+', encoding='utf-8') as f:
+    #     config = yaml.load(f, Loader=yaml.FullLoader)
+    # log(f"{Back.GREEN} Training - Epoch: {5 + 1}, CLIP loss: {0.666}, TDM Loss: {0.666} {Back.RESET}", config, 'test')
