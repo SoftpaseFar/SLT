@@ -160,6 +160,9 @@ def log(msg, config, file_name='', log_type="INFO", console=True, log_level=logg
 
     # 写入日志文件
     if config['log']['need_save']:
+        # 如果不存在，则创建目录
+        if not os.path.exists(config['log']['save_path']):
+            os.makedirs(config['log']['save_path'])
         file_name = current_time + '_' + log_type + '_' + file_name
         file_path = os.path.join(config['log']['save_path'], file_name + '.txt')
         with open(file_path, "a") as file:
