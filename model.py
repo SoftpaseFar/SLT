@@ -67,9 +67,8 @@ class TemporalFeatures(nn.Module):
                           batch_first=batch_first)
 
     def forward(self, input_ids):
-        ids = input_ids.cuda()
-        h0 = torch.zeros(self.gru.num_layers, ids.size(0), self.gru.hidden_size).to(ids.device)
-        hidden, _ = self.gru(ids, h0)
+        h0 = torch.zeros(self.gru.num_layers, input_ids.size(0), self.gru.hidden_size).to(input_ids.device)
+        hidden, _ = self.gru(input_ids, h0)
 
         return hidden
 
