@@ -9,6 +9,8 @@ import os
 import json
 import logging
 from datetime import datetime
+import gzip
+import pickle
 from colorama import init, Back
 import yaml
 
@@ -313,6 +315,14 @@ def load_json(file_path):
     with open(file_path, 'r') as f:
         data = json.load(f)
     return data
+
+
+# -------
+# 加载 labels 文件
+def load_dataset_labels(path):
+    with gzip.open(path, "rb") as f:
+        loaded_object = pickle.load(f)
+        return loaded_object
 
 
 if __name__ == '__main__':

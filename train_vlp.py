@@ -12,6 +12,8 @@ from pathlib import Path
 from transformers import MBartTokenizer
 from model import CLIP, TextDecoder
 from dataset import How2SignDataset
+from dataset import P14TDataset
+from dataset import CSLDailyDataset
 from torch.utils.data import DataLoader
 from torch.optim import lr_scheduler as scheduler
 from timm.optim import create_optimizer
@@ -27,7 +29,7 @@ from colorama import init, Back
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=2, type=int)
-    a_parser.add_argument('--epochs', default=2, type=int)
+    a_parser.add_argument('--epochs', default=200, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -73,6 +75,9 @@ def get_args_parser():
     a_parser.add_argument('--save_model', default=True, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
+
+    a_parser.add_argument('--dataset', default='P14TDataset', type=str,
+                          choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
     return a_parser
 
 
@@ -96,12 +101,18 @@ def main(args_, config):
 
     # 加载训练数据集
     # 训练数据集
-    train_data = How2SignDataset(path=config['data']['train_label_path'],
-                                 tokenizer=tokenizer,
-                                 config=config,
-                                 args=args,
-                                 phase='train',
-                                 training_refurbish=True)
+    train_data = eval(args['dataset'])(path=config[args['dataset']]['train_label_path'],
+                                       tokenizer=tokenizer,
+                                       config=config,
+                                       args=args,
+                                       phase='train',
+                                       training_refurbish=True)
+
+    # 测试代码
+    print(train_data[0])
+    return
+    # 测试结束
+
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],
                                   num_workers=args['num_workers'],

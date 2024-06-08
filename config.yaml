@@ -1,10 +1,26 @@
-# 数据集参数
-data:
+# How2Sign数据集参数
+How2SignDataset:
   videos_dir: ./data/How2Sign/videos/
   keypoints_dir: ./data/How2Sign/keypoints/
   train_label_path: ./data/How2Sign/train.csv
   val_label_path: ./data/How2Sign/val.csv
   test_label_path: ./data/How2Sign/test.csv
+  max_length: 300
+
+# PHOENIX-2014-T数据集参数
+P14TDataset:
+  train_label_path: ./data/Phonexi2014T/labels.train
+  dev_label_path: ./data/Phonexi2014T/labels.dev
+  test_label_path: ./data/Phonexi2014T/labels.test
+  features_path: ./data/Phonexi2014T/features
+  max_length: 300
+
+# CSL-Daily数据集参数
+CSLDailyDataset:
+  train_label_path: ./data/CSLDaily/labels.train
+  dev_label_path: ./data/CSLDaily/labels.dev
+  test_label_path: ./data/CSLDaily/labels.test
+  img_path: ./data/CSLDaily/
   max_length: 300
 
 # 模型参数
