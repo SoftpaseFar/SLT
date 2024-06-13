@@ -6,6 +6,8 @@ import random
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+import subprocess
+import json
 
 
 # How2Sign数据集
@@ -213,11 +215,23 @@ class P14TDataset(Dataset):
         # length_sample = sample['length']
         tgt_sample = sample['text']
 
-        # 需要关键点信息 TODO
+        # 需要关键点信息
         if self.args['need_keypoints']:
-            pass
+            video_keypoints_path = self.config['P14TDataset']['keypoints_dir'] + name_sample + '/alphapose-results.json'
+            keypoints_sample = self._load_keypoints(video_keypoints_path)
+            return name_sample, imgs_sample, tgt_sample, keypoints_sample
 
         return name_sample, imgs_sample, tgt_sample
+
+    def _load_keypoints(self, path):
+        data = utils.load_json(path)
+        video_vectors = [frame_data['people'][0]['pose_keypoints_2d'] for frame_data in data.values()]
+        print("video_vectors[0]:", len(video_vectors[0]))
+        # 如果关键点向量数量超过最大长度，随机抽取最大长度的关键点向量，并保持顺序
+        if len(video_vectors) > self.max_length:
+            video_vectors = [video_vectors[i] for i in
+                             sorted(random.sample(range(len(video_vectors)), self.max_length))]
+        return video_vectors
 
     def _load_imgs(self, imgs_path):
         data_transform = transforms.Compose([
@@ -261,7 +275,7 @@ class P14TDataset(Dataset):
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
             # 一个batch情感收集
-            emo_batch_tmp.append('excited')
+            emo_batch_tmp.append('aufgeregt')
             tgt_batch.append(tgt_sample)
             if self.args['need_keypoints'] and other_data:
                 keypoints_sample = torch.tensor(other_data[0])
