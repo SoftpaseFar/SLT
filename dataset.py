@@ -198,22 +198,19 @@ class P14TDataset(Dataset):
         self.features_path = config[args['dataset']]['features_path']
         self.max_length = config[args['dataset']]['max_length']
 
-        self.raw_data = [value for _, value in self.data.items()]
-        print(self.raw_data)
+        # TODO 20->1000
+        self.raw_data = [value for _, value in self.data.items()][0:20]
 
     def __len__(self):
         return len(self.raw_data)
 
     def __getitem__(self, idx):
-        sample = self.raw_data[idx]
+        sample: dict = self.raw_data[idx]
 
         name_sample = sample['name']
-        print(name_sample)
-
-        video_name = sample['video_name']
-        video_path = os.path.join(self.config['data']['videos_dir'], video_name)
-        imgs_sample = self._load_video(video_path)
-        # length_sample = len(imgs_sample)
+        imgs_path = sample['imgs_path']
+        imgs_sample = self._load_imgs(imgs_path)
+        # length_sample = sample['length']
         tgt_sample = sample['text']
 
         # 需要关键点信息 TODO
@@ -222,28 +219,19 @@ class P14TDataset(Dataset):
 
         return name_sample, imgs_sample, tgt_sample
 
-    def _load_keypoints(self, path):
-        video_vectors = utils.load_json(path)
-        # 如果关键点向量数量超过最大长度，随机抽取最大长度的关键点向量，并保持顺序
-        if len(video_vectors) > self.max_length:
-            video_vectors = [video_vectors[i] for i in
-                             sorted(random.sample(range(len(video_vectors)), self.max_length))]
-        return video_vectors
-
-    def _load_video(self, video_path):
+    def _load_imgs(self, imgs_path):
         data_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
 
-        cap = cv2.VideoCapture(video_path)
         frames = []
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frames.append(frame)
-        cap.release()
+        for path in imgs_path:
+            try:
+                img = cv2.imread(os.path.join(self.features_path, path))
+                frames.append(img)
+            except IOError as e:
+                print(f"P14TDataset数据集，图片加载错误:", e)
 
         # 如果帧数超过最大长度，随机抽取max_length帧
         if len(frames) > self.max_length:
@@ -357,7 +345,7 @@ class P14TDataset(Dataset):
         return src_input, tgt_input
 
     def __str__(self):
-        return f'# total {self.phase} set: {len(self.raw_data)}.'
+        return f'# 阶段：{self.phase} 总共： {len(self.raw_data)}.'
 
 
 # CSL-Delay数据集
