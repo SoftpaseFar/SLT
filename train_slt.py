@@ -75,6 +75,9 @@ def get_args_parser():
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
+
+    a_parser.add_argument('--dataset', default='CSLDailyDataset', type=str,
+                          choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
     return a_parser
 
 
@@ -99,12 +102,12 @@ def main(args_, config):
 
     # 加载训练数据集
     # 训练数据集
-    train_data = How2SignDataset(path=config['data']['train_label_path'],
-                                 tokenizer=tokenizer,
-                                 config=config,
-                                 args=args,
-                                 phase='train',
-                                 training_refurbish=False)
+    train_data = eval(args['dataset'])(path=config[args['dataset']]['train_label_path'],
+                                       tokenizer=tokenizer,
+                                       config=config,
+                                       args=args,
+                                       phase='train',
+                                       training_refurbish=False)
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],
                                   num_workers=args['num_workers'],
@@ -113,12 +116,12 @@ def main(args_, config):
                                   drop_last=True)
 
     # 验证数据集
-    val_data = How2SignDataset(path=config['data']['val_label_path'],
-                               tokenizer=tokenizer,
-                               config=config,
-                               args=args,
-                               phase='val',
-                               training_refurbish=False)
+    val_data = eval(args['dataset'])(path=config[args['dataset']]['val_label_path'],
+                                     tokenizer=tokenizer,
+                                     config=config,
+                                     args=args,
+                                     phase='val',
+                                     training_refurbish=False)
     val_dataloader = DataLoader(val_data,
                                 batch_size=args['batch_size'],
                                 num_workers=args['num_workers'],
@@ -127,12 +130,12 @@ def main(args_, config):
                                 drop_last=True)
 
     # 测试数据集
-    test_data = How2SignDataset(path=config['data']['test_label_path'],
-                                tokenizer=tokenizer,
-                                config=config,
-                                args=args,
-                                phase='test',
-                                training_refurbish=False)
+    test_data = eval(args['dataset'])(path=config[args['dataset']]['test_label_path'],
+                                      tokenizer=tokenizer,
+                                      config=config,
+                                      args=args,
+                                      phase='test',
+                                      training_refurbish=False)
     test_dataloader = DataLoader(test_data,
                                  batch_size=args['batch_size'],
                                  num_workers=args['num_workers'],

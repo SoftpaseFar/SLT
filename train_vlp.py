@@ -108,11 +108,11 @@ def main(args_, config):
                                        phase='train',
                                        training_refurbish=True)
 
-    # 测试代码
-    print(train_data[0])
-    return 666
-
-    # 测试结束
+    # # 测试代码
+    # print(train_data[0])
+    # return 666
+    #
+    # # 测试结束
 
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],
@@ -122,12 +122,13 @@ def main(args_, config):
                                   drop_last=True)
 
     # 验证数据集
-    val_data = How2SignDataset(path=config['data']['val_label_path'],
-                               tokenizer=tokenizer,
-                               config=config,
-                               args=args,
-                               phase='val',
-                               training_refurbish=True)
+    val_data = eval(args['dataset'])(path=config[args['dataset']]['val_label_path'],
+                                     tokenizer=tokenizer,
+                                     config=config,
+                                     args=args,
+                                     phase='val',
+                                     training_refurbish=True)
+
     val_dataloader = DataLoader(val_data,
                                 batch_size=args['batch_size'],
                                 num_workers=args['num_workers'],
@@ -136,12 +137,12 @@ def main(args_, config):
                                 drop_last=True)
 
     # 测试数据集
-    test_data = How2SignDataset(path=config['data']['test_label_path'],
-                                tokenizer=tokenizer,
-                                config=config,
-                                args=args,
-                                phase='test',
-                                training_refurbish=True)
+    test_data = eval(args['dataset'])(path=config[args['dataset']]['test_label_path'],
+                                      tokenizer=tokenizer,
+                                      config=config,
+                                      args=args,
+                                      phase='test',
+                                      training_refurbish=True)
     test_dataloader = DataLoader(test_data,
                                  batch_size=args['batch_size'],
                                  num_workers=args['num_workers'],

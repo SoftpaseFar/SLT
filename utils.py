@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 import gzip
 import pickle
+import csv
 from colorama import init, Back
 import yaml
 
@@ -323,6 +324,16 @@ def load_dataset_labels(path):
     with gzip.open(path, "rb") as f:
         loaded_object = pickle.load(f)
         return loaded_object
+
+
+# -------
+# 加载 txt 文件
+def load_dataset_txt(path):
+    # 读取文件并转换为字典列表
+    with open(path, mode='r', encoding='utf-8') as file:
+        reader = csv.DictReader(file, delimiter='|')
+        data_list = [row for row in reader]
+        return data_list
 
 
 if __name__ == '__main__':

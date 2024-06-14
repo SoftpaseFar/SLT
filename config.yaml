@@ -19,9 +19,10 @@ P14TDataset:
 # CSL-Daily数据集参数
 CSLDailyDataset:
   train_label_path: ./data/CSLDaily/train.txt
+  keypoints_dir: ./data/CSLDaily/keypoints/
   dev_label_path: ./data/CSLDaily/dev.txt
   test_label_path: ./data/CSLDaily/test.txt
-  img_path: ./data/CSLDaily/
+  features_path: ./data/CSLDaily/features
   max_length: 300
 
 # 模型参数
