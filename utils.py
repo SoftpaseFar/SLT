@@ -297,9 +297,9 @@ def merge_json_from_subdir(subdir_path):
                 data = json.load(f)
                 if 'people' in data and len(data['people']) > 0:
                     frame_keypoints_vectors.extend(data['people'][0]['pose_keypoints_2d'])
-                    frame_keypoints_vectors.extend(data['people'][0]['face_keypoints_2d'])
-                    frame_keypoints_vectors.extend(data['people'][0]['hand_left_keypoints_2d'])
-                    frame_keypoints_vectors.extend(data['people'][0]['hand_right_keypoints_2d'])
+                    # frame_keypoints_vectors.extend(data['people'][0]['face_keypoints_2d'])
+                    # frame_keypoints_vectors.extend(data['people'][0]['hand_left_keypoints_2d'])
+                    # frame_keypoints_vectors.extend(data['people'][0]['hand_right_keypoints_2d'])
         video_keypoints_vectors.append(frame_keypoints_vectors)
     return video_keypoints_vectors
 

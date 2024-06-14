@@ -109,6 +109,7 @@ def check_input():
 
     # for video
     if len(args.video):
+        print('正在处理类型: video')
         if os.path.isfile(args.video):
             videofile = args.video
             return 'video', videofile
@@ -125,6 +126,7 @@ def check_input():
 
     # for images
     if len(args.inputpath) or len(args.inputlist) or len(args.inputimg):
+        print('正在处理类型: images')
         inputpath = args.inputpath
         inputlist = args.inputlist
         inputimg = args.inputimg
@@ -317,15 +319,32 @@ if __name__ == '__main__':
     model, tracker, pose_dataset, detector = load_model()
     output_path = args.outputpath
 
+    # image
     input_path = args.inputpath
-    sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
-    input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+    input_paths = []
+    if input_path:
+        sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
+        input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+
+    # video
+    videos_dir = args.video
+    video_paths = []
+    if videos_dir:
+        video_paths = [os.path.join(videos_dir, d) for d in os.listdir(videos_dir) if
+                       os.path.isfile(os.path.join(videos_dir, d))]
+
     if len(input_paths):
         # print(input_paths)
         for input_path, sub_dir in zip(input_paths, sub_dirs):
             print("正在处理:", sub_dir)
             args.outputpath = output_path + sub_dir
             args.inputpath = input_path
+            process(model, tracker, pose_dataset, detector)
+    elif len(args.video):
+        for video_path in video_paths:
+            print("正在处理:", video_path)
+            args.outputpath = output_path + os.path.splitext(os.path.basename(video_path))[0]
+            args.video = video_path
             process(model, tracker, pose_dataset, detector)
     else:
         process(model, tracker, pose_dataset, detector)

@@ -9,7 +9,10 @@ from transformers import MBartTokenizer
 import numpy as np
 import random
 from model import SLT
+# How2SignDataset、P14TDataset、CSLDailyDataset有用 动态加载
 from dataset import How2SignDataset
+from dataset import P14TDataset
+from dataset import CSLDailyDataset
 from torch.utils.data import DataLoader
 from torch.optim import lr_scheduler as scheduler
 from timm.optim import create_optimizer

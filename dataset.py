@@ -1,4 +1,5 @@
 import os
+import re
 import torch
 import cv2
 import utils
@@ -39,7 +40,8 @@ class How2SignDataset(Dataset):
         # 需要关键点信息
         if self.args['need_keypoints']:
             video_keypoints_name = sample['video_name'][:-4] + '.json'
-            video_keypoints_path = os.path.join(self.config[self.args['dataset']]['keypoints_dir'], video_keypoints_name)
+            video_keypoints_path = os.path.join(self.config[self.args['dataset']]['keypoints_dir'],
+                                                video_keypoints_name)
             keypoints_sample = self._load_keypoints(video_keypoints_path)
             return name_sample, imgs_sample, tgt_sample, keypoints_sample
 
@@ -366,8 +368,8 @@ class CSLDailyDataset(Dataset):
     def __init__(self, path, tokenizer, config, args, phase, training_refurbish=False):
         # 未处理原始数据
         # TODO 20->1000
-        self.raw_data = utils.load_dataset_txt(path)[18380:18400]
-        print(self.raw_data)
+        self.raw_data = utils.load_dataset_txt(path)[0:20]
+        # print(self.raw_data)
 
         self.tokenizer = tokenizer
         self.config = config
@@ -385,7 +387,12 @@ class CSLDailyDataset(Dataset):
         sample: dict = self.raw_data[idx]
 
         name_sample = sample['name']
-        imgs_path = os.path.join(self.config[self.args['dataset']]['features_path'], name_sample)
+        video_path = os.path.join(self.features_path, name_sample)
+        # print('video_path: ', video_path)
+        imgs_path = sorted([os.path.join(name_sample, f) for f in os.listdir(video_path) if f.endswith('.jpg')],
+                           key=lambda s: [int(text) if text.isdigit() else text.lower() for text in
+                                          re.split(r'([0-9]+)', s)])
+
         # print('imgs_path: ', imgs_path)
         imgs_sample = self._load_imgs(imgs_path)
         # length_sample = sample['length']
@@ -393,8 +400,9 @@ class CSLDailyDataset(Dataset):
 
         # 需要关键点信息
         if self.args['need_keypoints']:
-            video_keypoints_path = os.path.join(self.config[self.args['dataset']]['keypoints_dir'], name_sample,
+            video_keypoints_path = os.path.join(self.config[self.args['dataset']]['keypoints_dir'], name_sample +
                                                 '/alphapose-results.json')
+            # print('video_keypoints_path: ', video_keypoints_path)
             keypoints_sample = self._load_keypoints(video_keypoints_path)
             return name_sample, imgs_sample, tgt_sample, keypoints_sample
 

@@ -11,6 +11,7 @@ import numpy as np
 from pathlib import Path
 from transformers import MBartTokenizer
 from model import CLIP, TextDecoder
+# How2SignDataset、P14TDataset、CSLDailyDataset有用 动态加载
 from dataset import How2SignDataset
 from dataset import P14TDataset
 from dataset import CSLDailyDataset
@@ -108,11 +109,11 @@ def main(args_, config):
                                        phase='train',
                                        training_refurbish=True)
 
-    # # 测试代码
-    # print(train_data[0])
-    # return 666
-    #
-    # # 测试结束
+    # 测试代码
+    print(train_data[0])
+    return 666
+
+    # 测试结束
 
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],
