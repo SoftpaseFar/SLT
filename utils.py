@@ -319,11 +319,17 @@ def load_json(file_path):
 
 
 # -------
-# 加载 labels 文件
+# 加载数据集标签的函数
 def load_dataset_labels(path):
     with gzip.open(path, "rb") as f:
         loaded_object = pickle.load(f)
         return loaded_object
+
+
+# 保存数据集标签的函数
+def save_dataset_labels(data, path):
+    with gzip.open(path, "wb") as f:
+        pickle.dump(data, f)
 
 
 # -------
@@ -337,8 +343,11 @@ def load_dataset_txt(path):
 
 
 if __name__ == '__main__':
-    # keypoints预处理
-    gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
+    # # keypoints预处理
+    # gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
+
+    res = load_dataset_labels('./data/Phonexi2014T/labels.test')
+    print(res)
 
     # # log 测试
     # init()  # 初始化 colorama

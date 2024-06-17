@@ -40,15 +40,19 @@ class How2SignDataset(Dataset):
         # 需要关键点信息
         if self.args['need_keypoints']:
             video_keypoints_name = sample['video_name'][:-4] + '.json'
-            video_keypoints_path = os.path.join(self.config[self.args['dataset']]['keypoints_dir'],
-                                                video_keypoints_name)
+            # video_keypoints_path = os.path.join(self.config[self.args['dataset']]['keypoints_dir'],
+            # video_keypoints_name)
+            video_keypoints_path = self.config[self.args['dataset']][
+                                       'keypoints_dir'] + name_sample + '/alphapose-results.json'
             keypoints_sample = self._load_keypoints(video_keypoints_path)
             return name_sample, imgs_sample, tgt_sample, keypoints_sample
 
         return name_sample, imgs_sample, tgt_sample
 
     def _load_keypoints(self, path):
-        video_vectors = utils.load_json(path)
+        data = utils.load_json(path)
+        video_vectors = [frame_data['people'][0]['pose_keypoints_2d'] for frame_data in data.values()]
+        print("video_vectors[0]:", len(video_vectors[0]))
         # 如果关键点向量数量超过最大长度，随机抽取最大长度的关键点向量，并保持顺序
         if len(video_vectors) > self.max_length:
             video_vectors = [video_vectors[i] for i in
@@ -190,6 +194,7 @@ class P14TDataset(Dataset):
     def __init__(self, path, tokenizer, config, args, phase, training_refurbish=False):
         # 未处理原始数据
         self.data = utils.load_dataset_labels(path)
+        # print('self.data: ', self.data)
 
         self.tokenizer = tokenizer
         self.config = config
@@ -201,13 +206,16 @@ class P14TDataset(Dataset):
         self.max_length = config[args['dataset']]['max_length']
 
         # TODO 20->1000
-        self.raw_data = [value for _, value in self.data.items()][0:20]
+        # print(self.data[0:20][0])
+        self.raw_data = [value for item in self.data[0:20] for _, value in item.items()]
+        # print(self.raw_data[0])
 
     def __len__(self):
         return len(self.raw_data)
 
     def __getitem__(self, idx):
         sample: dict = self.raw_data[idx]
+        # print(sample)
 
         name_sample = sample['name']
         imgs_path = sample['imgs_path']

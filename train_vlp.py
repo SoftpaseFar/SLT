@@ -77,7 +77,7 @@ def get_args_parser():
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
 
-    a_parser.add_argument('--dataset', default='CSLDailyDataset', type=str,
+    a_parser.add_argument('--dataset', default='How2SignDataset', type=str,
                           choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
     return a_parser
 
@@ -109,11 +109,11 @@ def main(args_, config):
                                        phase='train',
                                        training_refurbish=True)
 
-    # 测试代码
-    print(train_data[0])
-    return 666
-
-    # 测试结束
+    # # 测试代码
+    # print(train_data[0])
+    # return 666
+    #
+    # # 测试结束
 
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],

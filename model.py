@@ -82,7 +82,7 @@ class ImageCLIP(nn.Module):
         self.frames_tem = TemporalFeatures(input_size=1024)
 
         # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
-        self.keypoints_tem = TemporalFeatures(input_size=411)
+        self.keypoints_tem = TemporalFeatures(input_size=54)
 
     def forward(self, src_input):
         imgs_ids = src_input['imgs_ids'].cuda()
