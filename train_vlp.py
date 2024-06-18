@@ -376,6 +376,8 @@ def evaluate_one_epoch(args, epoch, dataloader,
         for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
             # -1 代表在测试数据集上
             if epoch >= 0:
+                print(f"Step {step + 1}...")
+            else:
                 print(f"Epoch {epoch + 1} val, Step {step + 1}...")
 
             # 解码器损失权重分配
@@ -406,11 +408,11 @@ def evaluate_one_epoch(args, epoch, dataloader,
                 emo_masked_lm_loss = criterion['loss_ce'](emo_logits,
                                                           tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
-                # print(
-                #     f"{Back.GREEN}"
-                #     f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
-                #     f"emo_masked_lm_loss: {emo_masked_lm_loss}"
-                #     f"{Back.RESET}")
+                print(
+                    f"{Back.GREEN}"
+                    f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
+                    f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                    f"{Back.RESET}")
 
                 masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
                 masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)

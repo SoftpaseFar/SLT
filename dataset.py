@@ -102,7 +102,7 @@ class How2SignDataset(Dataset):
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
             # 一个batch情感收集
-            emo_batch_tmp.append('excited')
+            emo_batch_tmp.append('positive')
             tgt_batch.append(tgt_sample)
             if self.args['need_keypoints'] and other_data:
                 keypoints_sample = torch.tensor(other_data[0])
@@ -284,7 +284,7 @@ class P14TDataset(Dataset):
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
             # 一个batch情感收集
-            emo_batch_tmp.append('aufgeregt')
+            emo_batch_tmp.append('positiv')
             tgt_batch.append(tgt_sample)
             if self.args['need_keypoints'] and other_data:
                 keypoints_sample = torch.tensor(other_data[0])
@@ -468,7 +468,7 @@ class CSLDailyDataset(Dataset):
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
             # 一个batch情感收集
-            emo_batch_tmp.append('高兴')
+            emo_batch_tmp.append('积极')
             tgt_batch.append(tgt_sample)
             if self.args['need_keypoints'] and other_data:
                 keypoints_sample = torch.tensor(other_data[0])

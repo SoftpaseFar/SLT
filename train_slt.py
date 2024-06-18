@@ -22,6 +22,7 @@ import utils
 from sacrebleu.metrics import BLEU
 import multiprocessing
 from colorama import init, Back
+import metrics
 
 
 def get_args_parser():
@@ -80,6 +81,8 @@ def get_args_parser():
 
     a_parser.add_argument('--dataset', default='CSLDailyDataset', type=str,
                           choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
+    # a_parser.add_argument('--language', default='ch', type=str,
+    # choices=['en', 'de', 'ch'])
     return a_parser
 
 
@@ -200,10 +203,11 @@ def main(args_, config):
                                       slt_train_dict,
                                       criterion, loss_scaler)
 
-        utils.log('vlp_train', epoch=epoch + 1,
-                  clip_loss=train_stats['clip_loss'],
-                  tdm_loss=train_stats['tdm_loss'],
-                  train_loss=train_loss)
+        print(
+            f"SLT阶段，在训练集上："
+            f"avg_vocab_emo_loss={train_stats['avg_vocab_emo_loss']}")
+        utils.log('slt_train', epoch=epoch + 1,
+                  avg_vocab_emo_loss=train_stats['avg_vocab_emo_loss'])
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -211,6 +215,19 @@ def main(args_, config):
                                        slt_train_dict,
                                        criterion,
                                        tokenizer)
+        print(
+            f"SLT阶段，在验证集上："
+            f"avg_vocab_emo_loss={val_stats['avg_vocab_emo_loss']},"
+            f"emo_accuracy={val_stats['emo_accuracy']},"
+            f"vocab_bleu_s={val_stats['vocab_bleu_s']},"
+            f"integrated_score={val_stats['integrated_score']},"
+        )
+        utils.log('slt_val', epoch=epoch + 1,
+                  avg_vocab_emo_loss=val_stats['avg_vocab_emo_loss'],
+                  emo_accuracy=val_stats['emo_accuracy'],
+                  vocab_bleu_s=val_stats['vocab_bleu_s'],
+                  integrated_score=val_stats['integrated_score']
+                  )
 
         if max_accuracy < val_stats["integrated_score"]:
             max_accuracy = val_stats["integrated_score"]
@@ -227,11 +244,30 @@ def main(args_, config):
                     'val_stats': val_stats,
                     'max_accuracy': max_accuracy
                 }, args=args, filename=f"slt_checkpoint.pth.tar")
+        else:
+            print(f"在val数据集上无提升，对于第{epoch + 1}轮. ")
 
         print(f'当前最优{Back.GREEN} Blue-4分数: {max_accuracy:.2f}%{Back.RESET}')
 
-        # 其他逻辑 TODO
-        print("其他逻辑...")
+    # 测试集评估
+    test_stats = evaluate_one_epoch(args, epoch=-1,
+                                    dataloader=test_dataloader,
+                                    slt_train_dict=slt_train_dict,
+                                    criterion=criterion,
+                                    tokenizer=tokenizer)
+    print(
+        f"SLT阶段，在测试集上："
+        f"avg_vocab_emo_loss={test_stats['avg_vocab_emo_loss']},"
+        f"emo_accuracy={test_stats['emo_accuracy']},"
+        f"vocab_bleu_s={test_stats['vocab_bleu_s']},"
+        f"integrated_score={test_stats['integrated_score']},"
+    )
+    utils.log('slt_test',
+              avg_vocab_emo_loss=test_stats['avg_vocab_emo_loss'],
+              emo_accuracy=test_stats['emo_accuracy'],
+              vocab_bleu_s=test_stats['vocab_bleu_s'],
+              integrated_score=test_stats['integrated_score']
+              )
 
 
 # 训练一个epoch
@@ -297,7 +333,10 @@ def evaluate_one_epoch(args, epoch,
                        slt_train_dict,
                        criterion,
                        tokenizer):
-    print(f"Epoch {epoch + 1} val...")
+    # -1 代表在测试数据集上
+    if epoch >= 0:
+        print(f"Epoch {epoch + 1} val...")
+
     # 设置模型为评估模式
     slt_train_dict['slt_model'].eval()
 
@@ -314,7 +353,11 @@ def evaluate_one_epoch(args, epoch,
         vocab_emo_losses = []
 
         for step, (src_input, tgt_input) in enumerate(dataloader):
-            print(f"Epoch {epoch + 1} val, Step {step}...")
+            # -1 代表在测试数据集上
+            if epoch >= 0:
+                print(f"Step {step}...")
+            else:
+                print(f"Epoch {epoch + 1} val, Step {step}...")
 
             # 解码器损失权重分配
             vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
@@ -366,8 +409,8 @@ def evaluate_one_epoch(args, epoch,
             tgt_pres.extend(one_batch_tgt_pres)
             tgt_refs.extend(one_batch_tgt_refs)
 
-        # 情感评估指标计算 TODO
-        emo_accuracy = 0.0
+        # 情感评估指标计算
+        emo_accuracy = metrics.cal_emo_accuracy(emo_pres, emo_refs)
 
         # 翻译评测指标计算
         bleu = BLEU()
