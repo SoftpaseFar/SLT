@@ -209,6 +209,9 @@ def main(args_, config):
         utils.log('slt_train', epoch=epoch + 1,
                   avg_vocab_emo_loss=train_stats['avg_vocab_emo_loss'])
 
+        # 释放缓存
+        torch.cuda.empty_cache()
+
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
                                        val_dataloader,
@@ -228,6 +231,9 @@ def main(args_, config):
                   vocab_bleu_s=val_stats['vocab_bleu_s'],
                   integrated_score=val_stats['integrated_score']
                   )
+
+        # 释放缓存
+        torch.cuda.empty_cache()
 
         if max_accuracy < val_stats["integrated_score"]:
             max_accuracy = val_stats["integrated_score"]
