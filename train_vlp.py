@@ -168,7 +168,7 @@ def main(args_, config):
     # 解码器
     txt_decoder = TextDecoder(config=config)
     txt_decoder.to(device)
-    optimizer_td = AdamW(txt_decoder.parameters(), lr=1e-3, weight_decay=0, betas=(0.9, 0.98))
+    optimizer_td = AdamW(txt_decoder.parameters(), lr=1e-4, weight_decay=0, betas=(0.9, 0.98))
     lr_scheduler_td = scheduler.CosineAnnealingLR(
         optimizer=optimizer_td,
         eta_min=1e-8,
@@ -328,7 +328,7 @@ def train_one_epoch(args, epoch, dataloader,
                                                 tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
 
                 # 将 logits 转换为概率分布
-                emo_logits = F.softmax(emo_logits, dim=-1)
+                # emo_logits = F.softmax(emo_logits, dim=-1)
                 print('emo_logits: ', emo_logits)
                 print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
