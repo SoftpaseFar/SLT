@@ -123,7 +123,7 @@ def main(args_, config):
                                   drop_last=True)
 
     # 验证数据集
-    val_data = eval(args['dataset'])(path=config[args['dataset']]['val_label_path'],
+    val_data = eval(args['dataset'])(path=config[args['dataset']]['dev_label_path'],
                                      tokenizer=tokenizer,
                                      config=config,
                                      args=args,
