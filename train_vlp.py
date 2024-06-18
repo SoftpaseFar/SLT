@@ -25,7 +25,7 @@ from loss import KLLoss
 from definition import *
 import multiprocessing
 from colorama import init, Back
-import torch.nn.functional as f
+import torch.nn.functional as F
 
 
 def get_args_parser():
@@ -326,7 +326,7 @@ def train_one_epoch(args, epoch, dataloader,
                                                 tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
 
                 # 将 logits 转换为概率分布
-                emo_probs = f.softmax(emo_logits, dim=-1)
+                emo_probs = F.softmax(emo_logits, dim=-1)
                 print('emo_logits: ', emo_probs)
                 print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
