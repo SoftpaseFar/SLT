@@ -349,9 +349,9 @@ def train_one_epoch(args, epoch, dataloader,
         if not math.isfinite(clip_total_loss.item()):
             print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
             sys.exit(1)
-        if not math.isfinite(masked_lm_loss.item()):
-            print("TDM Loss: {}, 结束训练".format(masked_lm_loss.item()))
-            sys.exit(1)
+        # if not math.isfinite(masked_lm_loss.item()):
+        #     print("TDM Loss: {}, 结束训练".format(masked_lm_loss.item()))
+        #     sys.exit(1)
 
     # 更新学习率
     clip_train_dict['lr_scheduler'].step(epoch)
