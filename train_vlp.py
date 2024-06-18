@@ -322,12 +322,14 @@ def train_one_epoch(args, epoch, dataloader,
                                                                       txt_encoder=clip_train_dict[
                                                                           'clip_model'].get_txt_encoder())
                 loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
+                print('tdm_logits: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]))
+                print('tgt_input: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1))
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
                                                 tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
 
                 # 将 logits 转换为概率分布
-                emo_probs = F.softmax(emo_logits, dim=-1)
-                print('emo_logits: ', emo_probs)
+                emo_logits = F.softmax(emo_logits, dim=-1)
+                print('emo_logits: ', emo_logits)
                 print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
                 emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
