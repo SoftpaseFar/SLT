@@ -30,7 +30,7 @@ from colorama import init, Back
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=2, type=int)
-    a_parser.add_argument('--epochs', default=200, type=int)
+    a_parser.add_argument('--epochs', default=20, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -204,23 +204,27 @@ def main(args_, config):
         train_stats = train_one_epoch(args, epoch, train_dataloader,
                                       clip_train_dict, td_train_dict,
                                       criterion, loss_scaler)
-        utils.log(
-            f"{Back.GREEN}"
-            f"Training - Epoch: {epoch + 1}, CLIP loss: {train_stats['clip_loss']}, TDM Loss: {train_stats['tdm_loss']}"
-            f"{Back.RESET}",
-            config,
-            'train_stats')
+        train_loss = (train_stats['clip_loss'] + train_stats['tdm_loss']) / 2
+        print(
+            f"VLP阶段，在训练集上："
+            f"clip_loss={train_stats['clip_loss']}, tdm_loss={train_stats['tdm_loss']}, train_loss={train_loss}")
+        utils.log('vlp_train', epoch=epoch + 1,
+                  clip_loss=train_stats['clip_loss'],
+                  tdm_loss=train_stats['tdm_loss'],
+                  train_loss=train_loss)
+
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
                                        clip_train_dict, td_train_dict,
                                        criterion)
-        utils.log(
-            f"{Back.GREEN}"
-            f"Evaluation - Epoch: {epoch + 1}, Loss: {val_stats['clip_loss']}, TDM Loss: {val_stats['tdm_loss']}"
-            f"{Back.RESET}",
-            config,
-            'val_stats')
         val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
+        utils.log('vlp_val', epoch=epoch + 1,
+                  clip_loss=val_stats['clip_loss'],
+                  tdm_loss=val_stats['tdm_loss'],
+                  val_loss=val_loss)
+        print(
+            f"VLP阶段，在验证集上："
+            f"clip_loss={val_stats['clip_loss']}, tdm_loss={val_stats['tdm_loss']}, val_loss={val_loss}")
 
         # 检查是否有新的最低验证损失
         if val_loss < min_loss:
@@ -246,7 +250,6 @@ def main(args_, config):
                     'val_stats': val_stats,
                     'best_loss': val_loss
                 }, args=args, filename=f"vlp_checkpoint.pth.tar")
-                # log记录 TODO
 
         else:
             patience_counter += 1
@@ -257,9 +260,21 @@ def main(args_, config):
             print(f"训练早停，patience：{patience}，第{epoch + 1}轮.")
             break
 
-    # 测试集评估 TODO
-    print("加载模型用于测试数据集，查看效果，请稍等...")
-    print("代码待完善，程序结束...")
+    # 测试集评估
+    print("在-测试数据集-查看效果，请稍等...")
+    # 评估一个epoch
+    test_stats = evaluate_one_epoch(args, epoch=-1,
+                                    dataloader=test_dataloader,
+                                    clip_train_dict=clip_train_dict,
+                                    td_train_dict=td_train_dict,
+                                    criterion=criterion)
+    test_loss = (test_stats['clip_loss'] + test_stats['tdm_loss']) / 2
+    print(
+        f"VLP阶段，在测试集上：clip_loss={test_stats['clip_loss']}, tdm_loss={test_stats['tdm_loss']}, test_loss={test_loss}")
+    utils.log('vlp_test',
+              clip_loss=test_stats['clip_loss'],
+              tdm_loss=test_stats['tdm_loss'],
+              test_loss=test_loss)
 
 
 def train_one_epoch(args, epoch, dataloader,
@@ -347,7 +362,9 @@ def train_one_epoch(args, epoch, dataloader,
 def evaluate_one_epoch(args, epoch, dataloader,
                        clip_train_dict, td_train_dict,
                        criterion):
-    print(f"Epoch {epoch + 1} val...")
+    # -1 代表在测试数据集上
+    if epoch >= 0:
+        print(f"Epoch {epoch + 1} val...")
 
     # 状态记录表
     clip_losses, tdm_losses = [], []
@@ -357,7 +374,9 @@ def evaluate_one_epoch(args, epoch, dataloader,
 
     with torch.no_grad():
         for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
-            print(f"Epoch {epoch + 1} val, Step {step + 1}...")
+            # -1 代表在测试数据集上
+            if epoch >= 0:
+                print(f"Epoch {epoch + 1} val, Step {step + 1}...")
 
             # 解码器损失权重分配
             vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
@@ -387,11 +406,11 @@ def evaluate_one_epoch(args, epoch, dataloader,
                 emo_masked_lm_loss = criterion['loss_ce'](emo_logits,
                                                           tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
-                print(
-                    f"{Back.GREEN}"
-                    f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
-                    f"emo_masked_lm_loss: {emo_masked_lm_loss}"
-                    f"{Back.RESET}")
+                # print(
+                #     f"{Back.GREEN}"
+                #     f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
+                #     f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                #     f"{Back.RESET}")
 
                 masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
                 masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)

@@ -145,7 +145,7 @@ def noise_injecting(raw_gloss, noise_rate=0.15, random_shuffle=False, is_train=T
 # ------
 # 日志
 # 类型： DEBUG、INFO、WARNING、ERROR、CRITICAL 等
-def log(msg, config, file_name='', log_type="INFO", console=True, log_level=logging.INFO, **kwargs):
+def log_(msg, config, file_name='', log_type="INFO", console=True, log_level=logging.INFO, **kwargs):
     # 设置日志级别
     logging.basicConfig(level=log_level)
 
@@ -174,6 +174,26 @@ def log(msg, config, file_name='', log_type="INFO", console=True, log_level=logg
     # 打印到控制台
     if console:
         print(msg)
+
+
+def write_log(filename, **kwargs):
+    # 获取当前时间
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # 将kwargs解包并用空格隔开
+    content = '[' + current_time + ']|' + '|'.join(f"{key}={value}" for key, value in kwargs.items())
+    # 追加写入到文件
+    with open(filename, 'a', encoding='utf-8') as file:
+        file.write(content + '\n')
+    print(f"{Back.GREEN}保存成功{Back.RESET}")
+
+
+def log(phase, **kwargs):
+    if phase == 'vlp':
+        write_log('./log/vlp.txt', **kwargs)
+    elif phase == 'slt':
+        write_log('./log/slt.txt', **kwargs)
+    else:
+        print(f"{Back.RED}保存失败{Back.RESET}")
 
 
 # ------
@@ -343,11 +363,16 @@ def load_dataset_txt(path):
 
 
 if __name__ == '__main__':
+    log('vlp', loss_1=1, loss_2=2, loss_3=3)
+    log('vlp', loss_1=1, loss_2=2, loss_3=3)
+    log('slt', loss_1=1, loss_2=2, loss3=3)
+    log('slt', loss_1=1, loss_2=2, loss3=3)
+
     # # keypoints预处理
     # gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
 
-    res = load_dataset_labels('./data/Phonexi2014T/labels.test')
-    print(res)
+    # res = load_dataset_labels('./data/Phonexi2014T/labels.test')
+    # print(res)
 
     # # log 测试
     # init()  # 初始化 colorama

@@ -27,7 +27,7 @@ from colorama import init, Back
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=1, type=int)
-    a_parser.add_argument('--epochs', default=200, type=int)
+    a_parser.add_argument('--epochs', default=20, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -73,7 +73,6 @@ def get_args_parser():
     a_parser.add_argument('--save_model', default=True, type=bool)
 
     a_parser.add_argument('--finetune', default=True, type=bool)
-    a_parser.add_argument('--eval', default=False, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
 
@@ -164,7 +163,7 @@ def main(args_, config):
         # 严格模式设置为False以允许不匹配的参数
         slt_model.load_state_dict(clip_model_state_dict, strict=False)
         slt_model.load_state_dict(txt_decoder_state_dict, strict=False)
-        print("VLP模型权重应用到SLT完成.")
+        print("VLP模型权重应用到SLT...，加载完成.")
 
     # 优化器 学习率调度器
     optimizer = create_optimizer(args_, slt_model)
@@ -183,13 +182,7 @@ def main(args_, config):
     criterion = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX, label_smoothing=0.2)
     loss_scaler = NativeScaler()
 
-    # 数据增强 TODO
-    # 内存优化 TODO
-    # 日志优化 TODO
-
-    # 评估模式 TODO
-    if args['eval']:
-        pass
+    # 数据增强、内存优化、日志优化 Maybe->TODO
 
     # 开始训练
     print(f"开始训练，共训练{Back.GREEN} {args['epochs']} {Back.RESET}轮.")
@@ -206,12 +199,11 @@ def main(args_, config):
                                       train_dataloader,
                                       slt_train_dict,
                                       criterion, loss_scaler)
-        utils.log(
-            f"{Back.GREEN}"
-            f"Training - Epoch: {epoch + 1}, Avg_Vocab_Emo Loss: {train_stats['avg_vocab_emo_loss']}"
-            f"{Back.RESET}",
-            config,
-            'train_stats')
+
+        utils.log('vlp_train', epoch=epoch + 1,
+                  clip_loss=train_stats['clip_loss'],
+                  tdm_loss=train_stats['tdm_loss'],
+                  train_loss=train_loss)
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -219,17 +211,6 @@ def main(args_, config):
                                        slt_train_dict,
                                        criterion,
                                        tokenizer)
-
-        utils.log(
-            f"{Back.GREEN}"
-            f"Evaluation - Epoch: {epoch + 1}, avg_vocab_emo_loss: {val_stats['avg_vocab_emo_loss']},"
-            f"emo_accuracy：{val_stats['emo_accuracy']},"
-            f"vocab_bleu_s：{val_stats['vocab_bleu_s']},"
-            f"integrated_score：{val_stats['integrated_score']},"
-            f"{Back.RESET}",
-            config,
-            'train_stats'
-        )
 
         if max_accuracy < val_stats["integrated_score"]:
             max_accuracy = val_stats["integrated_score"]
@@ -246,7 +227,6 @@ def main(args_, config):
                     'val_stats': val_stats,
                     'max_accuracy': max_accuracy
                 }, args=args, filename=f"slt_checkpoint.pth.tar")
-                # log记录 TODO
 
         print(f'当前最优{Back.GREEN} Blue-4分数: {max_accuracy:.2f}%{Back.RESET}')
 
@@ -292,7 +272,7 @@ def train_one_epoch(args, epoch,
         vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
         # 梯度清零 梯度回传 更新梯度
         slt_train_dict['optimizer'].zero_grad()
-        # 使用loss_scaler的__call__方法进行损失的缩放和梯度更新
+        # 使用loss_scaler 的__call__方法进行损失的缩放和梯度更新
         loss_scaler(vocab_emo_loss, slt_train_dict['optimizer'])
         vocab_emo_losses.append(vocab_emo_loss.item())
 
