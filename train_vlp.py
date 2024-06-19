@@ -183,8 +183,10 @@ def main(args_, config):
 
     # 损失函数 缩放管理器
     criterion = dict(
-        loss_kl=KLLoss(),
-        loss_ce=torch.nn.CrossEntropyLoss()
+        loss_clip=KLLoss(),
+        loss_vocab=torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX,
+                                             label_smoothing=0.2),
+        loss_emo=torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     )
     loss_scaler = NativeScaler()
 
@@ -293,8 +295,10 @@ def train_one_epoch(args, epoch, dataloader,
     clip_train_dict['clip_model'].train(True)
     td_train_dict['txt_decoder'].train(True)
 
-    clip_loss = criterion['loss_kl']
-    tdm_loss = criterion['loss_ce']
+    clip_loss = criterion['loss_clip']
+    tdm_loss = criterion['loss_vocab']
+    emo_loss = criterion['loss_emo']
+
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
         print(f"Epoch {epoch + 1} train, Step {step + 1}...")
 
@@ -334,7 +338,7 @@ def train_one_epoch(args, epoch, dataloader,
                 # emo_logits = F.softmax(emo_logits, dim=-1)
                 print('emo_logits: ', emo_logits)
                 print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
-                emo_masked_lm_loss = tdm_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
                 print(
                     f"{Back.GREEN}"
@@ -402,8 +406,9 @@ def evaluate_one_epoch(args, epoch, dataloader,
                 # clip 部分
                 img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
                                                                                                  tgt_input)
-                loss_i_t = criterion['loss_kl'](img_txt_s_matrix, ground_truth)
-                loss_t_i = criterion['loss_kl'](txt_img_s_matrix, ground_truth)
+
+                loss_i_t = criterion['loss_clip'](img_txt_s_matrix, ground_truth)
+                loss_t_i = criterion['loss_clip'](txt_img_s_matrix, ground_truth)
                 clip_total_loss = (loss_i_t + loss_t_i) / 2.
                 clip_losses.append(clip_total_loss.item())
 
@@ -413,12 +418,13 @@ def evaluate_one_epoch(args, epoch, dataloader,
                                                                       txt_encoder=clip_train_dict[
                                                                           'clip_model'].get_txt_encoder())
                 loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-                vocab_masked_lm_loss = criterion['loss_ce'](tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                            tgt_input['input_ids'][:, 1:].cuda().reshape(
-                                                                -1)) * loss_lambda
+                vocab_masked_lm_loss = criterion['loss_vocab'](tdm_logits.reshape(-1, tdm_logits.shape[-1]),
+                                                               tgt_input['input_ids'][:, 1:].cuda().reshape(
+                                                                   -1)) * loss_lambda
 
-                emo_masked_lm_loss = criterion['loss_ce'](emo_logits,
-                                                          tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+                emo_masked_lm_loss = criterion['loss_emo'](emo_logits,
+                                                           tgt_input['input_ids'][:, 0].cuda().reshape(
+                                                               -1)) * loss_lambda
 
                 print(
                     f"{Back.GREEN}"
