@@ -214,8 +214,9 @@ def main(args_, config):
                   clip_loss=train_stats['clip_loss'],
                   tdm_loss=train_stats['tdm_loss'],
                   train_loss=train_loss)
-        # 释放缓存
-        torch.cuda.empty_cache()
+
+        # 清理CUDA缓存
+        utils.clear_cuda_cache()
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
@@ -229,8 +230,9 @@ def main(args_, config):
         print(
             f"VLP阶段，在验证集上："
             f"clip_loss={val_stats['clip_loss']}, tdm_loss={val_stats['tdm_loss']}, val_loss={val_loss}")
-        # 释放缓存
-        torch.cuda.empty_cache()
+
+        # 清理CUDA缓存
+        utils.clear_cuda_cache()
 
         # 检查是否有新的最低验证损失
         if val_loss < min_loss:
