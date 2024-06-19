@@ -1,16 +1,22 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from transformers import MBartForConditionalGeneration
+from transformers import MBartForConditionalGeneration, MBartConfig
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
+
+import utils
 
 
 # CLIP文本编码器
 class TextCLIP(nn.Module):
     def __init__(self, config=None):
         super(TextCLIP, self).__init__()
+
+        # 配置编码器
+        MBart = utils.load_mbart_from_conf(config['MBart']['parameters'])
+
         # 获取文本编码器
-        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25").get_encoder()
+        self.txt_encoder = MBart.get_encoder()
 
         # 设置输出头维度
         self.lm_head = nn.Identity()
@@ -31,24 +37,27 @@ class FramesFeatures(nn.Module):
         super(FramesFeatures, self).__init__()
         self.conv1 = nn.Conv3d(in_channels=3, out_channels=64, kernel_size=(3, 3, 3), stride=(1, 1, 1),
                                padding=(1, 1, 1))
-        self.conv2 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=(3, 3, 3), stride=(1, 1, 1),
-                               padding=(1, 1, 1))
-        self.conv3 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=(3, 3, 3), stride=(1, 1, 1),
-                               padding=(1, 1, 1))
-        self.conv4 = nn.Conv3d(in_channels=256, out_channels=1024, kernel_size=(3, 3, 3), stride=(1, 1, 1),
-                               padding=(1, 1, 1))
-        self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+        # 调整维度为64
+        # self.conv2 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+        #                        padding=(1, 1, 1))
+
+        # self.conv3 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+        #                        padding=(1, 1, 1))
+        # self.conv4 = nn.Conv3d(in_channels=256, out_channels=1024, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+        #                        padding=(1, 1, 1))
+        # self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
 
     def forward(self, input_ids):
         input_ids = input_ids.permute(0, 2, 1, 3, 4)  # 调整维度顺序为[batch_size, channels, depth, height, width]
         src = self.relu(self.conv1(input_ids))
-        src = self.pool(src)
-        src = self.relu(self.conv2(src))
-        src = self.pool(src)
-        src = self.relu(self.conv3(src))
-        src = self.pool(src)
-        src = self.relu(self.conv4(src))
+        # 调整维度为64
+        # src = self.pool(src)
+        # src = self.relu(self.conv2(src))
+        # src = self.pool(src)
+        # src = self.relu(self.conv3(src))
+        # src = self.pool(src)
+        # src = self.relu(self.conv4(src))
         # 对后两个维度求平均值
         src = torch.mean(src, dim=[-2, -1])
         # 将维度调整为[batch_size, depth, channels]
@@ -59,7 +68,7 @@ class FramesFeatures(nn.Module):
 
 # 时间特征提取；
 class TemporalFeatures(nn.Module):
-    def __init__(self, input_size=512, hidden_size=1024, num_layers=1, batch_first=True):
+    def __init__(self, input_size=64, hidden_size=128, num_layers=1, batch_first=True):
         super(TemporalFeatures, self).__init__()
         self.gru = nn.GRU(input_size=input_size,
                           hidden_size=hidden_size,
@@ -79,7 +88,7 @@ class ImageCLIP(nn.Module):
         super(ImageCLIP, self).__init__()
         # 原始视频帧提取
         self.frames_emb = FramesFeatures()
-        self.frames_tem = TemporalFeatures(input_size=1024)
+        self.frames_tem = TemporalFeatures(input_size=64)
 
         # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
         self.keypoints_tem = TemporalFeatures(input_size=54)
@@ -106,10 +115,11 @@ class ImageCLIP(nn.Module):
 
 # 文本解码器
 class TextDecoder(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config=None):
         super(TextDecoder, self).__init__()
-        self.MBart = MBartForConditionalGeneration.from_pretrained(
-            "facebook/mbart-large-cc25")
+        # self.MBart = MBartForConditionalGeneration.from_pretrained(
+        #     "facebook/mbart-large-cc25")
+        self.MBart = utils.load_mbart_from_conf(config['MBart']['parameters'])
         self.txt_decoder = self.MBart.get_decoder()
         self.lm_head = self.MBart.get_output_embeddings()
         self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))

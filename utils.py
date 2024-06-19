@@ -13,6 +13,7 @@ import gzip
 import pickle
 import csv
 from colorama import init, Back
+from transformers import MBartForConditionalGeneration, MBartConfig
 import yaml
 
 
@@ -271,6 +272,16 @@ def load_json(file_path):
     with open(file_path, 'r') as f:
         data = json.load(f)
     return data
+
+
+# 从config加载MBart模型
+def load_mbart_from_conf(config_path):
+    config_dict = load_json(config_path)
+    # 使用加载的配置初始化配置对象
+    config = MBartConfig.from_dict(config_dict)
+    # 从预训练模型加载权重并应用新的配置
+    mbart = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25", config=config)
+    return mbart
 
 
 # -------

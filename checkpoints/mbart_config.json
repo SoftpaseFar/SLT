@@ -1,0 +1,11 @@
+{
+  "encoder_layers": 6,
+  "decoder_layers": 6,
+  "d_model": 512,
+  "encoder_ffn_dim": 2048,
+  "decoder_ffn_dim": 2048,
+  "encoder_attention_heads": 8,
+  "decoder_attention_heads": 8,
+  "vocab_size": 250027,
+  "max_position_embeddings": 1024
+}

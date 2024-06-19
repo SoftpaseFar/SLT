@@ -26,10 +26,12 @@ CSLDailyDataset:
   max_length: 300
 
 # 模型参数
-model:
+MBart:
   name: facebook/mbart-large-cc25
   vocab_size: ./pretrain_models/MBart_ver1
   vlp_cps: ./checkpoints/vlp_checkpoint.pth.tar
+  parameters: ./checkpoints/mbart_config.json
+
 
 
 # 日志 need_save: yes or no
