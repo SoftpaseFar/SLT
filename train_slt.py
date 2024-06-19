@@ -27,7 +27,7 @@ import metrics
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=1, type=int)
+    a_parser.add_argument('--batch_size', default=2, type=int)
     a_parser.add_argument('--epochs', default=20, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
@@ -36,7 +36,7 @@ def get_args_parser():
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
     a_parser.add_argument('--pin_mem', action='store_true', default=True)
-    a_parser.add_argument('--num_workers', default=8, type=int)
+    a_parser.add_argument('--num_workers', default=4, type=int)
     # a_parser.add_argument('--num_workers', default=2, type=int)
     a_parser.add_argument('--checkpoints_dir', default='./checkpoints/')
     a_parser.add_argument('--log_dir', default='./log/')
@@ -182,7 +182,12 @@ def main(args_, config):
     )
 
     # 损失函数 loss缩放器
-    criterion = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX, label_smoothing=0.2)
+    # criterion = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX, label_smoothing=0.2)
+    criterion = dict(
+        loss_vocab=torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX,
+                                             label_smoothing=0.2),
+        loss_emo=torch.nn.CrossEntropyLoss(label_smoothing=0.2)
+    )
     loss_scaler = NativeScaler()
 
     # 数据增强、内存优化、日志优化 Maybe->TODO
@@ -299,11 +304,12 @@ def train_one_epoch(args, epoch,
 
         loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
         # loss_lambda = torch.tensor(args['loss_lambda'])
-        vocab_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                  tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
-        emo_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+        vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
+                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+        emo_lm_loss = criterion['loss_emo'](emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
         # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
+
         print(
             f"{Back.GREEN}"
             f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
@@ -375,11 +381,13 @@ def evaluate_one_epoch(args, epoch,
 
             loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
             # loss_lambda = torch.tensor(args['loss_lambda'])
-            vocab_lm_loss = criterion(vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                      tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
-            emo_lm_loss = criterion(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+            vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
+                                                    tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+            emo_lm_loss = criterion['loss_emo'](emo_logits,
+                                                tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
 
             # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
+
             print(
                 f"{Back.GREEN}"
                 f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "

@@ -258,7 +258,6 @@ def main(args_, config):
                     'val_stats': val_stats,
                     'best_loss': val_loss
                 }, args=args, filename=f"vlp_checkpoint.pth.tar")
-
         else:
             patience_counter += 1
             print(f"在val损失上无提升，对于第{epoch + 1}轮. ")
