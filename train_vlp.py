@@ -184,8 +184,7 @@ def main(args_, config):
     # 损失函数 缩放管理器
     criterion = dict(
         loss_kl=KLLoss(),
-        loss_ce=torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX,
-                                          label_smoothing=0.2)
+        loss_ce=torch.nn.CrossEntropyLoss()
     )
     loss_scaler = NativeScaler()
 
