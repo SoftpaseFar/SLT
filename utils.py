@@ -311,10 +311,11 @@ def load_dataset_txt(path):
 # -------
 # 清理CUDA缓存
 def clear_cuda_cache():
+    torch.backends.cuda.max_split_size_mb = 1024
     # 清理未使用的CUDA缓存
     torch.cuda.empty_cache()
-    # 重置最大显存分配计数器
-    torch.cuda.reset_max_memory_allocated()
+    # 重置所有峰值显存统计信息
+    torch.cuda.reset_peak_memory_stats()
 
 
 if __name__ == '__main__':
