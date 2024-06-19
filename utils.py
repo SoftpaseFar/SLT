@@ -308,6 +308,15 @@ def load_dataset_txt(path):
         return data_list
 
 
+# -------
+# 清理CUDA缓存
+def clear_cuda_cache():
+    # 清理未使用的CUDA缓存
+    torch.cuda.empty_cache()
+    # 重置最大显存分配计数器
+    torch.cuda.reset_max_memory_allocated()
+
+
 if __name__ == '__main__':
     log('vlp', loss_1=1, loss_2=2, loss_3=3)
     log('vlp', loss_1=1, loss_2=2, loss_3=3)
