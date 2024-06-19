@@ -20,13 +20,8 @@ emotion_vocab = {
     'negativ': 2,
     '消极': 2,
 
-    # Complex
-    'complex': 3,
-    'komplex': 3,
-    '复杂': 3,
-
-    # Ambiguous
-    'ambiguous': 4,
-    'mehrdeutig': 4,
-    '不明确': 4,
+    # neutral
+    'neutral': 3,
+    'neutraler': 3,
+    '中性': 3,
 }

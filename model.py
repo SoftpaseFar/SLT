@@ -143,7 +143,7 @@ class TextDecoder(nn.Module):
         self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
 
         # 情感层输出
-        self.emo_predict = nn.Linear(250027, 4)
+        self.emo_predict = nn.Linear(250027, 3)
 
         # 映射层
         self.projector_128_1024 = ProjectionLayer(input_dim=128, output_dim=1024)
