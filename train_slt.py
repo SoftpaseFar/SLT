@@ -79,7 +79,7 @@ def get_args_parser():
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
 
-    a_parser.add_argument('--dataset', default='CSLDailyDataset', type=str,
+    a_parser.add_argument('--dataset', default='How2SignDataset', type=str,
                           choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
     # a_parser.add_argument('--language', default='ch', type=str,
     # choices=['en', 'de', 'ch'])
@@ -186,7 +186,7 @@ def main(args_, config):
     criterion = dict(
         loss_vocab=torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX,
                                              label_smoothing=0.2),
-        loss_emo=torch.nn.CrossEntropyLoss(label_smoothing=0.2)
+        loss_emo=torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     )
     loss_scaler = NativeScaler()
 
@@ -214,8 +214,8 @@ def main(args_, config):
         utils.log('slt_train', epoch=epoch + 1,
                   avg_vocab_emo_loss=train_stats['avg_vocab_emo_loss'])
 
-        # 释放缓存
-        torch.cuda.empty_cache()
+        # 清理CUDA缓存
+        utils.clear_cuda_cache()
 
         # 评估一个epoch
         val_stats = evaluate_one_epoch(args, epoch,
@@ -237,8 +237,8 @@ def main(args_, config):
                   integrated_score=val_stats['integrated_score']
                   )
 
-        # 释放缓存
-        torch.cuda.empty_cache()
+        # 清理CUDA缓存
+        utils.clear_cuda_cache()
 
         if max_accuracy < val_stats["integrated_score"]:
             max_accuracy = val_stats["integrated_score"]
@@ -312,7 +312,7 @@ def train_one_epoch(args, epoch,
 
         print(
             f"{Back.GREEN}"
-            f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
+            f"Training - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
             f"emo_lm_loss: {emo_lm_loss}"
             f"{Back.RESET}")
 
@@ -461,6 +461,9 @@ if __name__ == '__main__':
     # 创建输出文件夹
     if args.checkpoints_dir:
         Path(args.checkpoints_dir).mkdir(parents=True, exist_ok=True)
+
+    # 清理CUDA缓存
+    utils.clear_cuda_cache()
 
     # 开始训练
     main(args, config)
