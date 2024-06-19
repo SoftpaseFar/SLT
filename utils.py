@@ -177,11 +177,11 @@ def log_(msg, config, file_name='', log_type="INFO", console=True, log_level=log
         print(msg)
 
 
-def write_log(filename, **kwargs):
+def write_log(filename, phase, **kwargs):
     # 获取当前时间
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     # 将kwargs解包并用空格隔开
-    content = '[' + current_time + ']|' + '|'.join(f"{key}={value}" for key, value in kwargs.items())
+    content = '[' + current_time + ']|' + phase + '|' + '|'.join(f"{key}={value}" for key, value in kwargs.items())
     # 追加写入到文件
     with open(filename, 'a', encoding='utf-8') as file:
         file.write(content + '\n')
@@ -189,10 +189,10 @@ def write_log(filename, **kwargs):
 
 
 def log(phase, **kwargs):
-    if phase == 'vlp':
-        write_log('./log/vlp.txt', **kwargs)
-    elif phase == 'slt':
-        write_log('./log/slt.txt', **kwargs)
+    if 'vlp' in phase:
+        write_log('./log/vlp.txt', phase, **kwargs)
+    elif 'slt' in phase:
+        write_log('./log/slt.txt', phase, **kwargs)
     else:
         print(f"{Back.RED}保存失败{Back.RESET}")
 
