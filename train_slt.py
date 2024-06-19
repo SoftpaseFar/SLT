@@ -27,7 +27,7 @@ import metrics
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=2, type=int)
+    a_parser.add_argument('--batch_size', default=1, type=int)
     a_parser.add_argument('--epochs', default=20, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
@@ -367,9 +367,9 @@ def evaluate_one_epoch(args, epoch,
         for step, (src_input, tgt_input) in enumerate(dataloader):
             # -1 代表在测试数据集上
             if epoch >= 0:
-                print(f"Step {step}...")
-            else:
                 print(f"Epoch {epoch + 1} val, Step {step}...")
+            else:
+                print(f"Step {step}...")
 
             # 解码器损失权重分配
             vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
