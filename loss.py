@@ -23,7 +23,7 @@ def compute_average(clip_losses, tdm_losses):
     return avg_clip_loss, avg_tdm_loss
 
 
-# 情感交叉熵
+# 情感交叉熵[没用到]
 def ce(batch_size, num_classes):
     # 假设这是情感分类的输出和真实标签
     emo_logits = torch.randn(batch_size, num_classes, requires_grad=True)
