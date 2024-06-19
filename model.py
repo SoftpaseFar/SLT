@@ -1,30 +1,45 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from transformers import MBartForConditionalGeneration, MBartConfig
+from transformers import MBartForConditionalGeneration
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
 
-import utils
+
+# 投影层
+class ProjectionLayer(nn.Module):
+    def __init__(self, input_dim=128, output_dim=1024):
+        super(ProjectionLayer, self).__init__()
+        self.projection = nn.Linear(input_dim, output_dim)
+
+    def forward(self, x):
+        projected_x = self.projection(x)
+        return projected_x
 
 
-# CLIP文本编码器
+# CLIP文本编码器[冻结]
 class TextCLIP(nn.Module):
     def __init__(self, config=None):
         super(TextCLIP, self).__init__()
-
-        # 配置编码器
-        MBart = utils.load_mbart_from_conf(config['MBart']['parameters'])
-
         # 获取文本编码器
-        self.txt_encoder = MBart.get_encoder()
+        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25").get_encoder()
+        # 冻结编码器
+        for param in self.txt_encoder.parameters():
+            param.requires_grad = False
 
         # 设置输出头维度
         self.lm_head = nn.Identity()
+
+        # 映射层
+        self.projector = ProjectionLayer(input_dim=1024, output_dim=128)
 
     def forward(self, tgt_input):
         # 隐藏层输出
         logits = self.txt_encoder(input_ids=tgt_input['input_ids'].cuda(),
                                   attention_mask=tgt_input['attention_mask'].cuda())[0]
+
+        # 维度映射1024->128
+        logits = self.projector(logits)
+
         # 获取句子编码
         emo_voca_emb = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
         # emotion = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
@@ -113,23 +128,33 @@ class ImageCLIP(nn.Module):
         return head, logits
 
 
-# 文本解码器
+# 文本解码器[冻结]
 class TextDecoder(nn.Module):
-    def __init__(self, config=None):
+    def __init__(self, config):
         super(TextDecoder, self).__init__()
-        # self.MBart = MBartForConditionalGeneration.from_pretrained(
-        #     "facebook/mbart-large-cc25")
-        self.MBart = utils.load_mbart_from_conf(config['MBart']['parameters'])
+        self.MBart = MBartForConditionalGeneration.from_pretrained(
+            "facebook/mbart-large-cc25")
         self.txt_decoder = self.MBart.get_decoder()
+        # 冻结解码器
+        for param in self.txt_decoder.parameters():
+            param.requires_grad = False
+
         self.lm_head = self.MBart.get_output_embeddings()
         self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
+
         # 情感层输出
         self.emo_predict = nn.Linear(250027, 4)
+
+        # 映射层
+        self.projector_128_1024 = ProjectionLayer(input_dim=128, output_dim=1024)
+        self.projector_1024_128 = ProjectionLayer(input_dim=1024, output_dim=128)
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
         with torch.no_grad():
             _, encoder_hidden_states = txt_encoder(masked_tgt_input)
+            # 维度映射
+            encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
 
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
@@ -142,6 +167,8 @@ class TextDecoder(nn.Module):
             return_dict=True,
         )
         vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        # 维度映射
+        vocab_logits_tmp = self.projector_1024_128(vocab_logits_tmp)
         vocab_logits = vocab_logits_tmp[:, 1:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
@@ -150,6 +177,9 @@ class TextDecoder(nn.Module):
     def forward_slt(self, tgt_input, encoder_hidden_states, encoder_attention_mask):
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
                                                self.txt_decoder.config.pad_token_id)
+        # 维度映射
+        encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
+
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids.cuda(),
             attention_mask=tgt_input['attention_mask'].cuda(),
@@ -161,6 +191,8 @@ class TextDecoder(nn.Module):
         )
 
         vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        # 维度映射
+        vocab_logits_tmp = self.projector_1024_128(vocab_logits_tmp)
         vocab_logits = vocab_logits_tmp[:, 1:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits

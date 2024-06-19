@@ -275,13 +275,13 @@ def load_json(file_path):
 
 
 # 从config加载MBart模型
-def load_mbart_from_conf(config_path):
-    config_dict = load_json(config_path)
-    # 使用加载的配置初始化配置对象
-    config = MBartConfig.from_dict(config_dict)
-    # 从预训练模型加载权重并应用新的配置
-    mbart = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25", config=config)
-    return mbart
+# def load_mbart_from_conf(config_path):
+#     config_dict = load_json(config_path)
+#     # 使用加载的配置初始化配置对象
+#     config = MBartConfig.from_dict(config_dict)
+#     # 从预训练模型加载权重并应用新的配置
+#     mbart = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25", config=config)
+#     return mbart
 
 
 # -------
