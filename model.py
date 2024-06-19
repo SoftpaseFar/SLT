@@ -147,7 +147,6 @@ class TextDecoder(nn.Module):
 
         # 映射层
         self.projector_128_1024 = ProjectionLayer(input_dim=128, output_dim=1024)
-        self.projector_1024_128 = ProjectionLayer(input_dim=1024, output_dim=128)
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
@@ -167,8 +166,6 @@ class TextDecoder(nn.Module):
             return_dict=True,
         )
         vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
-        # 维度映射
-        vocab_logits_tmp = self.projector_1024_128(vocab_logits_tmp)
         vocab_logits = vocab_logits_tmp[:, 1:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
@@ -191,8 +188,6 @@ class TextDecoder(nn.Module):
         )
 
         vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
-        # 维度映射
-        vocab_logits_tmp = self.projector_1024_128(vocab_logits_tmp)
         vocab_logits = vocab_logits_tmp[:, 1:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
