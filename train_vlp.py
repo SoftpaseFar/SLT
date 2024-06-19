@@ -30,7 +30,7 @@ import torch.nn.functional as F
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=4, type=int)
+    a_parser.add_argument('--batch_size', default=2, type=int)
     a_parser.add_argument('--epochs', default=20, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
