@@ -1,8 +1,5 @@
 data/
 __pycache__/
 .idea/
-trash/pretrain_models/
-trash/How2Sign_Tra/test.csv
-/trash
+trash/
 log/
-
