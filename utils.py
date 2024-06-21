@@ -318,29 +318,11 @@ def clear_cuda_cache():
     torch.cuda.reset_peak_memory_stats()
 
 
-# 统计代码行数[没用函数]
-def count_lines_in_directory(directory):
-    total_lines = 0
-
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith(".py"):
-                print('正在统计:', file, '请稍等...')
-                file_path = os.path.join(root, file)
-                with open(file_path, "r", encoding="utf-8") as f:
-                    lines = f.readlines()
-                    total_lines += len(lines)
-
-    return total_lines
-
-
 if __name__ == '__main__':
-    lines = count_lines_in_directory('../SLT')
-    print(lines)
-    # log('vlp', loss_1=1, loss_2=2, loss_3=3)
-    # log('vlp', loss_1=1, loss_2=2, loss_3=3)
-    # log('slt', loss_1=1, loss_2=2, loss3=3)
-    # log('slt', loss_1=1, loss_2=2, loss3=3)
+    log('vlp', loss_1=1, loss_2=2, loss_3=3)
+    log('vlp', loss_1=1, loss_2=2, loss_3=3)
+    log('slt', loss_1=1, loss_2=2, loss3=3)
+    log('slt', loss_1=1, loss_2=2, loss3=3)
 
     # # keypoints预处理
     # gen_videos_vectors('./data/How2Sign/pending_keypoints', './data/How2Sign/keypoints')
