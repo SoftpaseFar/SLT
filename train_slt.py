@@ -160,19 +160,23 @@ def main(args_, config):
 
     # VLP阶段权重加载
     if args['finetune']:
-        print("加载VLP模型权重...")
-        # 加载模型1的检查点
-        checkpoint = torch.load(config['model']['vlp_cps'])
+        try:
+            print("加载VLP模型权重...")
+            # 加载模型1的检查点
+            checkpoint = torch.load(config['model']['vlp_cps'])
 
-        # 获取模型1的权重参数
-        clip_model_state_dict = checkpoint['clip_train_dict']['clip_model']
-        txt_decoder_state_dict = checkpoint['td_train_dict']['txt_decoder']
+            # 获取模型1的权重参数
+            clip_model_state_dict = checkpoint['clip_train_dict']['clip_model']
+            txt_decoder_state_dict = checkpoint['td_train_dict']['txt_decoder']
 
-        # 将模型1的权重参数加载到模型2中
-        # 严格模式设置为False以允许不匹配的参数
-        slt_model.load_state_dict(clip_model_state_dict, strict=False)
-        slt_model.load_state_dict(txt_decoder_state_dict, strict=False)
-        print("VLP模型权重应用到SLT...，加载完成.")
+            # 将模型1的权重参数加载到模型2中
+            # 严格模式设置为False以允许不匹配的参数
+            slt_model.load_state_dict(clip_model_state_dict, strict=False)
+            slt_model.load_state_dict(txt_decoder_state_dict, strict=False)
+        except IOError as e:
+            print("模型文件不存在或者加载失败...")
+        else:
+            print("VLP模型权重应用到SLT...，加载完成.")
 
     # 优化器 学习率调度器
     optimizer = create_optimizer(args_, slt_model)

@@ -1,25 +1,22 @@
 import torch
 import torch.nn as nn
-from transformers import MBartForConditionalGeneration, MBartTokenizerFast
+from transformers import MBartTokenizerFast
 import torch.nn.functional as F
-from transformers.models.mbart.modeling_mbart import shift_tokens_right
 
 
-
-
-class MBart(nn.Module):
+class Transformer(nn.Module):
     def __init__(self):
-        super(MBart, self).__init__()
-        self.mbart = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25")
-
-        self.encoder = self.mbart.get_encoder()
-        self.decoder = self.mbart.get_decoder()
-
-        self.lm_head = self.mbart.lm_head
+        super(Transformer, self).__init__()
+        self.encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=128, nhead=8),
+            num_layers=3
+        )
+        self.decoder = nn.TransformerDecoder(
+            nn.TransformerDecoderLayer(d_model=128, nhead=8),
+            num_layers=3
+        )
 
         self.tokenizer = MBartTokenizerFast.from_pretrained("facebook/mbart-large-cc25")
-
-        self.config = self.decoder.config
 
     def forward(self, text, src_lang='', tgt_lang=''):
         self.tokenizer.src_lang = src_lang
@@ -42,20 +39,15 @@ class MBart(nn.Module):
         decoder_attention_mask = decoded_input.attention_mask
 
         # 使用encoder生成encoder隐藏状态
-        encoder_outputs = self.encoder(input_ids=input_ids,
-                                       attention_mask=attention_mask,
-                                       return_dict=True)
-        decoder_input_ids = shift_tokens_right(decoder_input_ids, self.config.pad_token_id)
+        encoder_outputs = self.encoder(src=input_ids)
+        # decoder_input_ids = shift_tokens_right(decoder_input_ids, self.config.pad_token_id)
         print('shift_tokens_right: ', decoder_input_ids)
         # print('self.config.pad_token_id: ', self.config.pad_token_id)
 
         decoder_outputs = self.decoder(
-            input_ids=decoder_input_ids,
-            attention_mask=decoder_attention_mask,
+            tgt=decoder_input_ids,
 
-            encoder_hidden_states=encoder_outputs.last_hidden_state,
-            encoder_attention_mask=attention_mask,
-            return_dict=True,
+            memory=encoder_outputs.last_hidden_state
         )
 
         # 获取 logits
@@ -70,10 +62,10 @@ class MBart(nn.Module):
 
 
 if __name__ == '__main__':
-    mbart = MBart()
+    tfm = Transformer()
     # res = mbart.generate('I love you.', src_lang="en_XX", tgt_lang="es_XX")  # 设置目标语言为中文
-    mbart('I love you.', src_lang="en_XX", tgt_lang="en_XX")  # 设置目标语言为中文
-    mbart('I love you.', src_lang="zh_CN", tgt_lang="en_XX")  # 设置目标语言为中文
-    mbart('我爱你。', src_lang="zh_CN", tgt_lang="zh_CN")  # 设置目标语言为中文
-    mbart('我爱你。', src_lang="en_XX", tgt_lang="zh_CN")  # 设置目标语言为中文
+    tfm('I love you.', src_lang="en_XX", tgt_lang="en_XX")  # 设置目标语言为中文
+    tfm('I love you.', src_lang="zh_CN", tgt_lang="en_XX")  # 设置目标语言为中文
+    tfm('我爱你。', src_lang="zh_CN", tgt_lang="zh_CN")  # 设置目标语言为中文
+    tfm('我爱你。', src_lang="en_XX", tgt_lang="zh_CN")  # 设置目标语言为中文
     # print(f"Translated text: {res}")
