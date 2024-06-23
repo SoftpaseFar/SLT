@@ -23,6 +23,7 @@ from sacrebleu.metrics import BLEU
 import multiprocessing
 from colorama import init, Back
 import metrics
+import torch.nn.functional as F
 
 
 def get_args_parser():
@@ -422,8 +423,11 @@ def evaluate_one_epoch(args, epoch,
 
             # BLEU分数计算数据准备
             # 使用 tokenizer 解码每个样本
-            one_batch_tgt_pres = tokenizer.batch_decode(torch.argmax(vocab_logits[:, 1:, :], dim=-1),
-                                                        skip_special_tokens=True)
+            # one_batch_tgt_pres = tokenizer.batch_decode(torch.argmax(vocab_logits[:, 1:, :], dim=-1),
+            #                                             skip_special_tokens=True)
+            # 应用 Softmax 获取概率分布
+            probabilities = F.softmax(vocab_logits[:, 1:, :], dim=-1)
+            one_batch_tgt_pres = tokenizer.batch_decode(probabilities)
             one_batch_tgt_refs = tokenizer.batch_decode(tgt_input['input_ids'][:, 1:],
                                                         skip_special_tokens=True)
 

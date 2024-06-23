@@ -187,7 +187,8 @@ class TextDecoder(nn.Module):
             return_dict=True,
         )
 
-        vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        vocab_logits_tmp = self.lm_head(decoder_out.last_hidden_state)
+
         vocab_logits = vocab_logits_tmp[:, 1:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
