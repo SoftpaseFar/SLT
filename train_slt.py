@@ -427,6 +427,7 @@ def evaluate_one_epoch(args, epoch,
             #                                             skip_special_tokens=True)
             # 应用 Softmax 获取概率分布
             probabilities = F.softmax(vocab_logits[:, 1:, :], dim=-1)
+            print('probabilities: ', probabilities)
             one_batch_tgt_pres = tokenizer.batch_decode(probabilities)
             one_batch_tgt_refs = tokenizer.batch_decode(tgt_input['input_ids'][:, 1:],
                                                         skip_special_tokens=True)
