@@ -68,10 +68,12 @@ class MBart(nn.Module):
 
 
 if __name__ == '__main__':
-    mbart = MBart()
-    # res = mbart.generate('I love you.', src_lang="en_XX", tgt_lang="es_XX")  # 设置目标语言为中文
-    mbart('I love you.', src_lang="en_XX", tgt_lang="en_XX")  # 设置目标语言为中文
-    mbart('I love you.', src_lang="zh_CN", tgt_lang="en_XX")  # 设置目标语言为中文
-    mbart('我爱你。', src_lang="zh_CN", tgt_lang="zh_CN")  # 设置目标语言为中文
-    mbart('我爱你。', src_lang="en_XX", tgt_lang="zh_CN")  # 设置目标语言为中文
-    # print(f"Translated text: {res}")
+    # mbart = MBart()
+    # # res = mbart.generate('I love you.', src_lang="en_XX", tgt_lang="es_XX")  # 设置目标语言为中文
+    # mbart('I love you.', src_lang="en_XX", tgt_lang="en_XX")  # 设置目标语言为中文
+    # mbart('I love you.', src_lang="zh_CN", tgt_lang="en_XX")  # 设置目标语言为中文
+    # mbart('我爱你。', src_lang="zh_CN", tgt_lang="zh_CN")  # 设置目标语言为中文
+    # mbart('我爱你。', src_lang="en_XX", tgt_lang="zh_CN")  # 设置目标语言为中文
+    # # print(f"Translated text: {res}")
+    loss_lambda = torch.tensor('0.1')
+    print(loss_lambda)

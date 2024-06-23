@@ -46,7 +46,7 @@ def get_args_parser():
     a_parser.add_argument('--training_refurbish', default=True, type=bool)
     a_parser.add_argument('--noise_rate', default=0.15, type=float)
     a_parser.add_argument('--random_shuffle', default=False, type=bool)
-    a_parser.add_argument('--loss_lambda', type=float, default=1.0, metavar='RATE')
+    a_parser.add_argument('--loss_lambda', type=float, default=0.1, metavar='RATE')
 
     # * Optimize参数
     a_parser.add_argument('--opt', default='adamw', type=str, metavar='OPTIMIZER')
@@ -317,11 +317,12 @@ def train_one_epoch(args, epoch,
         vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
         loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
+
         # loss_lambda = torch.tensor(args['loss_lambda'])
         vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * (0.1 ** 2)
+                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
         emo_lm_loss = criterion['loss_emo'](emo_logits,
-                                            tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (0.1 ** 3)
+                                            tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (loss_lambda ** 3)
 
         # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
 
@@ -398,9 +399,9 @@ def evaluate_one_epoch(args, epoch,
             # loss_lambda = torch.tensor(args['loss_lambda'])
             vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
                                                     tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * (
-                                    0.1 ** 2)
+                                    loss_lambda ** 2)
             emo_lm_loss = criterion['loss_emo'](emo_logits,
-                                                tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (0.1 ** 3)
+                                                tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (loss_lambda ** 3)
 
             # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
 
