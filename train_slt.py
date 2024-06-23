@@ -266,6 +266,9 @@ def main(args_, config):
                     'val_stats': val_stats,
                     'max_accuracy': max_accuracy
                 }, args=args, filename=f"slt_checkpoint.pth.tar")
+            print(f"vocab_bleu: {Back.GREEN}"
+                  f"{val_stats['vocab_bleu']}"
+                  f"{Back.RESET}")
         else:
             print(f"在val数据集上无提升，对于第{epoch + 1}轮. ")
 
@@ -446,7 +449,6 @@ def evaluate_one_epoch(args, epoch,
         # 翻译评测指标计算
         bleu = BLEU()
         vocab_bleu = bleu.corpus_score(tgt_pres, [tgt_refs])
-        print('vocab_bleu: ', vocab_bleu)
         vocab_bleu_s = vocab_bleu.score
 
         integrated_score = emo_accuracy * args['lambda'] + vocab_bleu_s * (1 - args['lambda'])
