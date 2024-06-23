@@ -48,7 +48,7 @@ def get_args_parser():
     a_parser.add_argument('--training_refurbish', default=True, type=bool)
     a_parser.add_argument('--noise_rate', default=0.15, type=float)
     a_parser.add_argument('--random_shuffle', default=False, type=bool)
-    a_parser.add_argument('--loss_lambda', type=float, default=1.0, metavar='RATE')
+    a_parser.add_argument('--loss_lambda', type=float, default=0.1, metavar='RATE')
 
     # * Optimize参数
     a_parser.add_argument('--opt', default='adamw', type=str, metavar='OPTIMIZER')
@@ -345,7 +345,8 @@ def train_one_epoch(args, epoch, dataloader,
                 # emo_logits = F.softmax(emo_logits, dim=-1)
                 print('emo_logits: ', emo_logits)
                 print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
-                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * loss_lambda
+                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (
+                        loss_lambda ** 3)
 
                 print(
                     f"{Back.GREEN}"
@@ -432,7 +433,7 @@ def evaluate_one_epoch(args, epoch, dataloader,
 
                 emo_masked_lm_loss = criterion['loss_emo'](emo_logits,
                                                            tgt_input['input_ids'][:, 0].cuda().reshape(
-                                                               -1)) * loss_lambda
+                                                               -1)) * (loss_lambda ** 3)
 
                 print(
                     f"{Back.GREEN}"
