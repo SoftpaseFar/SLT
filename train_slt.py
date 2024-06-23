@@ -434,7 +434,9 @@ def evaluate_one_epoch(args, epoch,
 
         # 翻译评测指标计算
         bleu = BLEU()
-        vocab_bleu_s = bleu.corpus_score(tgt_pres, [tgt_refs]).score
+        vocab_bleu = bleu.corpus_score(tgt_pres, [tgt_refs])
+        print('vocab_bleu: ', vocab_bleu)
+        vocab_bleu_s = vocab_bleu.score
 
         integrated_score = emo_accuracy * args['lambda'] + vocab_bleu_s * (1 - args['lambda'])
 
@@ -442,7 +444,8 @@ def evaluate_one_epoch(args, epoch,
         'avg_vocab_emo_loss': avg_vocab_emo_loss,
         'emo_accuracy': emo_accuracy,
         'vocab_bleu_s': vocab_bleu_s,
-        'integrated_score': integrated_score
+        'integrated_score': integrated_score,
+        'vocab_bleu': vocab_bleu
     }
 
     return val_stats

@@ -202,31 +202,6 @@ class TextDecoder(nn.Module):
         else:
             raise ValueError("参数错误")
 
-    # generate方法待修订
-    def generate(self, tokenizer, encoder_hidden_states, max_length=200):
-        # 初始化解码器的输入，通常是一个特殊的起始 token
-        input_ids = torch.tensor([[tokenizer.bos_token_id]])
-        # 生成输出序列
-        for _ in range(max_length):
-            decoder_out = self.txt_decoder(
-                input_ids=input_ids,
-
-                encoder_hidden_states=encoder_hidden_states,
-                # encoder_attention_mask=encoder_attention_mask,
-
-                return_dict=True,
-            )
-
-            logits = self.lm_head(decoder_out[0])
-            next_token_id = torch.argmax(logits[:, -1, :], dim=-1)
-            input_ids = torch.cat([input_ids, next_token_id.unsqueeze(0)], dim=-1)
-            if next_token_id == tokenizer.eos_token_id:
-                break
-        generated_sequence = input_ids
-        sequence = tokenizer.batch_decode(generated_sequence[:, 1:],
-                                          skip_special_tokens=True)
-        return sequence
-
 
 # CLIP模型
 class CLIP(nn.Module):
@@ -290,9 +265,4 @@ class SLT(nn.Module):
                                                     encoder_attention_mask=src_input['attention_mask'])
         return vocab_logits, emo_logits
 
-    # generate方法待修订
-    def generate(self, src_input, tokenizer):
-        _, encoder_hidden_states = self.img_encoder(src_input)
-        sequence = self.txt_decoder.generate(tokenizer, encoder_hidden_states=encoder_hidden_states,
-                                             max_length=200)
-        return sequence
+    # generate function ->TODO
