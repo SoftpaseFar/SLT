@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from transformers import BartModel
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
+from nltk.translate.bleu_score import SmoothingFunction
 
 
 # 投影层
@@ -150,6 +151,9 @@ class TextDecoder(nn.Module):
 
         # 映射层
         self.projector_128_1024 = ProjectionLayer(input_dim=128, output_dim=1024)
+
+        # BLEU平滑层
+        self.smoothing_function = SmoothingFunction().method4
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
