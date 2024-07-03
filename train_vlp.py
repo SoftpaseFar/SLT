@@ -336,8 +336,8 @@ def train_one_epoch(args, epoch, dataloader,
                                                                       txt_encoder=clip_train_dict[
                                                                           'clip_model'].get_txt_encoder())
                 loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-                print('tdm_logits: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]))
-                print('tgt_input: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1))
+                print('tdm_logits.shape: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]).shape)
+                print('tgt_input.shape: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1).shape)
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
                                                 tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
 
