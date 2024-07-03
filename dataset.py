@@ -163,13 +163,15 @@ class How2SignDataset(Dataset):
                                    return_tensors="pt",
                                    padding=True,
                                    truncation=True)
-        print('tgt_input["input_ids"]: ', tgt_input['input_ids'].shape)
+        print('未注入情感，tgt_input["input_ids"]: ', tgt_input['input_ids'])
 
         print(f"正在加载数据集 {self.args['dataset']} ...")
 
         # 情感pad初进行情感注入
         for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
             tgt_input['input_ids'][i, 0] = value
+
+        print('注入情感，tgt_input["input_ids"]: ', tgt_input['input_ids'])
 
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:
