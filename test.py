@@ -65,15 +65,19 @@ class MBart(nn.Module):
         predicted_ids = torch.argmax(probabilities, dim=-1)
 
         print('forward: ', predicted_ids)
+        print(f"tokenizer.tgt_lang: {self.tokenizer.tgt_lang}")
+        # 使用batch_decode获取生成的文本
+        generated_text = self.tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
+        print('Generated text: ', generated_text)
+
+        return generated_text
 
 
 if __name__ == '__main__':
-    # mbart = MBart()
-    # # res = mbart.generate('I love you.', src_lang="en_XX", tgt_lang="es_XX")  # 设置目标语言为中文
-    # mbart('I love you.', src_lang="en_XX", tgt_lang="en_XX")  # 设置目标语言为中文
-    # mbart('I love you.', src_lang="zh_CN", tgt_lang="en_XX")  # 设置目标语言为中文
-    # mbart('我爱你。', src_lang="zh_CN", tgt_lang="zh_CN")  # 设置目标语言为中文
-    # mbart('我爱你。', src_lang="en_XX", tgt_lang="zh_CN")  # 设置目标语言为中文
-    # # print(f"Translated text: {res}")
-    loss_lambda = torch.tensor('0.1')
-    print(loss_lambda)
+    mbart = MBart()
+    # res = mbart.generate('I love you.', src_lang="en_XX", tgt_lang="es_XX")  # 设置目标语言为中文
+    mbart('I love you.', src_lang="en_XX", tgt_lang="en_XX")  # 设置目标语言为中文
+    mbart('I love you.', src_lang="zh_CN", tgt_lang="en_XX")  # 设置目标语言为中文
+    mbart('我爱你。', src_lang="en_XX", tgt_lang="en_XX")  # 设置目标语言为中文
+    mbart('我爱你。', src_lang="zh_CN", tgt_lang="en_XX")  # 设置目标语言为中文
+    # print(f"Translated text: {res}")
