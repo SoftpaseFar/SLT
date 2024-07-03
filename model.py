@@ -21,7 +21,7 @@ class TextCLIP(nn.Module):
     def __init__(self, config=None):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
-        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25").get_encoder()
+        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/bart-large").get_encoder()
         # 冻结编码器
         for param in self.txt_encoder.parameters():
             param.requires_grad = False
@@ -133,7 +133,7 @@ class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
         self.MBart = MBartForConditionalGeneration.from_pretrained(
-            "facebook/mbart-large-cc25")
+            "facebook/bart-large")
         self.txt_decoder = self.MBart.get_decoder()
         # 冻结解码器
         for param in self.txt_decoder.parameters():

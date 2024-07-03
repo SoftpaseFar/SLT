@@ -104,7 +104,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    tokenizer = MBartTokenizer.from_pretrained("facebook/bart-large")
     lang = {
         'How2SignDataset': 'en_XX',
         'P14TDataset': 'de_DE',
