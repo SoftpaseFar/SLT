@@ -42,7 +42,7 @@ class TextCLIP(nn.Module):
         logits = self.projector(logits)
 
         # 获取句子编码
-        emo_voca_emb = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
+        emo_voca_emb = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
         # emotion = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
         return self.lm_head(emo_voca_emb), logits
 
