@@ -163,6 +163,7 @@ class How2SignDataset(Dataset):
                                    return_tensors="pt",
                                    padding=True,
                                    truncation=True)
+        print('tgt_input["input_ids"]: ', tgt_input['input_ids'].shape)
 
         print(f"正在加载数据集 {self.args['dataset']} ...")
 
