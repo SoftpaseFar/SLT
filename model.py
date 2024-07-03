@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from transformers import MBartForConditionalGeneration
+from transformers import BartModel
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
 
 
@@ -21,7 +21,7 @@ class TextCLIP(nn.Module):
     def __init__(self, config=None):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
-        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/bart-large").get_encoder()
+        self.txt_encoder = BartModel.from_pretrained("facebook/bart-large").get_encoder()
         # 冻结编码器
         for param in self.txt_encoder.parameters():
             param.requires_grad = False
@@ -132,7 +132,7 @@ class ImageCLIP(nn.Module):
 class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
-        self.MBart = MBartForConditionalGeneration.from_pretrained(
+        self.MBart = BartModel.from_pretrained(
             "facebook/bart-large")
         self.txt_decoder = self.MBart.get_decoder()
         # 冻结解码器

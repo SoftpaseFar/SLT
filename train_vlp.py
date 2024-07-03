@@ -9,7 +9,7 @@ import utils
 import argparse
 import numpy as np
 from pathlib import Path
-from transformers import MBartTokenizer
+from transformers import BartTokenizer
 from model import CLIP, TextDecoder
 # How2SignDataset、P14TDataset、CSLDailyDataset有用 动态加载
 from dataset import How2SignDataset
@@ -99,7 +99,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/bart-large")
+    tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
     lang = {
         'How2SignDataset': 'en_XX',
         'P14TDataset': 'de_DE',
