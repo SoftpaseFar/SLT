@@ -132,15 +132,18 @@ class ImageCLIP(nn.Module):
 class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
-        self.MBart = BartModel.from_pretrained(
+        self.bart = BartModel.from_pretrained(
             "facebook/bart-large")
-        self.txt_decoder = self.MBart.get_decoder()
+        self.txt_decoder = self.bart.get_decoder()
+
         # 冻结解码器
         for param in self.txt_decoder.parameters():
             param.requires_grad = False
+        for param in self.bart.parameters():
+            param.requires_grad = False
 
-        self.lm_head = self.MBart.get_output_embeddings()
-        self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
+        # self.lm_head = self.MBart.get_output_embeddings()
+        # self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
 
         # 情感层输出
         self.emo_predict = nn.Linear(250027, 3)
@@ -165,7 +168,8 @@ class TextDecoder(nn.Module):
 
             return_dict=True,
         )
-        vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        # vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        vocab_logits_tmp = decoder_out.last_hidden_state
         vocab_logits = vocab_logits_tmp[:, 1:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
