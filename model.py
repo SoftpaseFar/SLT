@@ -157,7 +157,7 @@ class TextDecoder(nn.Module):
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
-        print('对，就是这里tgt_input: ', tgt_input.shape)
+        print('对，就是这里tgt_input["input_ids"]: ', tgt_input['input_ids'].shape)
         with torch.no_grad():
             _, encoder_hidden_states = txt_encoder(masked_tgt_input)
             # 维度映射
