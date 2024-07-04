@@ -45,7 +45,8 @@ class TextCLIP(nn.Module):
         print('句子编码处 tgt_input["input_ids"]', tgt_input['input_ids'])
         print('句子编码处 tgt_input[“input_ids”].argmin(dim=-1)', tgt_input['input_ids'].argmin(dim=-1))
         print('logits.shape[0]: ', logits.shape[0])
-        print('torch.arange(logits.shape[0]: ', torch.arange(logits.shape[0]))
+        print('logits 形状: ', logits.shape)
+        print('torch.arange(logits.shape[0]): ', torch.arange(logits.shape[0]))
         emo_voca_emb = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
         # emotion = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
         return self.lm_head(emo_voca_emb), logits
