@@ -47,7 +47,7 @@ class TextCLIP(nn.Module):
         print('logits.shape[0]: ', logits.shape[0])
         print('logits 形状: ', logits.shape)
         print('torch.arange(logits.shape[0]): ', torch.arange(logits.shape[0]))
-        print("logits[0,1,:]", logits[0, 1, :])
+        print("logits", logits)
         print("logits[0,1,:]", logits[1, 1, :])
         emo_voca_emb = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1), :]
         print("句子编码获取结束")
