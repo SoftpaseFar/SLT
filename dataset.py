@@ -173,6 +173,7 @@ class How2SignDataset(Dataset):
         # tgt_input['input_ids'][i, 2] = -6
 
         print('注入情感，tgt_input["input_ids"]: ', tgt_input['input_ids'])
+        print('注入情感，tgt_input["input_ids"].shape: ', tgt_input['input_ids'].shape)
 
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:
