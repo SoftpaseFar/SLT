@@ -11,11 +11,11 @@ WORD_MASK = "<mask>"
 # 情绪词典
 emotion_vocab = {
     # Positive
-    'positive': -1,
+    'positive': 1,
 
     # Negative
-    'negative': -2,
+    'negative': 2,
 
     # neutral
-    'neutral': -3,
+    'neutral': 3,
 }
