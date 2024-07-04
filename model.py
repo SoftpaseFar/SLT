@@ -189,7 +189,8 @@ class TextDecoder(nn.Module):
         vocab_logits_tmp = decoder_out.last_hidden_state
         print("解码器 logits 测试：", vocab_logits_tmp)
         print("解码器 logits.shape 测试：", vocab_logits_tmp.shape)
-        vocab_logits = vocab_logits_tmp[:, 2:, :]
+        vocab_logits = vocab_logits_tmp
+        # vocab_logits = vocab_logits_tmp[:, 2:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 1, :])
         return vocab_logits, emo_logits
 
