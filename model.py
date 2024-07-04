@@ -164,6 +164,7 @@ class TextDecoder(nn.Module):
             encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
 
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
+        print('右移 decoder_input_ids: ', decoder_input_ids)
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids.cuda(),
             attention_mask=tgt_input['attention_mask'].cuda(),
