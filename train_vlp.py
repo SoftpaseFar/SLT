@@ -339,13 +339,13 @@ def train_one_epoch(args, epoch, dataloader,
                 print('tdm_logits.shape: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]).shape)
                 print('tgt_input.shape: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1).shape)
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+                                                tgt_input['input_ids'][:, 2:].cuda().reshape(-1)) * loss_lambda
 
                 # 将 logits 转换为概率分布
                 # emo_logits = F.softmax(emo_logits, dim=-1)
                 print('emo_logits: ', emo_logits)
                 print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
-                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (
+                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 1].cuda().reshape(-1)) * (
                         loss_lambda ** 3)
 
                 print(
