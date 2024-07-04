@@ -337,7 +337,7 @@ def train_one_epoch(args, epoch, dataloader,
                                                                           'clip_model'].get_txt_encoder())
                 loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
                 print('tdm_logits.shape: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]).shape)
-                print('tgt_input.shape: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1).shape)
+                print('tgt_input.shape: ', tgt_input['input_ids'].cuda().reshape(-1).shape)
                 print("tdm_logits.reshape(-1, tdm_logits.shape[-1])", tdm_logits.reshape(-1, tdm_logits.shape[-1]).shape)
                 print("tgt_input['input_ids'][:, 2:].cuda().reshape(-1)",
                       tgt_input['input_ids'][:, 2:].cuda().reshape(-1).shape)
