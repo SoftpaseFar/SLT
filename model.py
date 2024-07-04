@@ -178,14 +178,16 @@ class TextDecoder(nn.Module):
             input_ids=decoder_input_ids.cuda(),
             attention_mask=tgt_input['attention_mask'].cuda(),
 
-            encoder_hidden_states=encoder_hidden_states[:, 1:-2, :].cuda(),
-            encoder_attention_mask=masked_tgt_input['attention_mask'][:, 1:-2].cuda(),
+            # encoder_hidden_states=encoder_hidden_states[:, 1:-2, :].cuda(),
+            encoder_hidden_states=encoder_hidden_states.cuda(),
+            encoder_attention_mask=masked_tgt_input['attention_mask'].cuda(),
+            # encoder_attention_mask=masked_tgt_input['attention_mask'][:, 1:-2].cuda(),
 
             return_dict=True,
         )
         # vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
         vocab_logits_tmp = decoder_out.last_hidden_state
-        print("vocab_logits_tmp：", vocab_logits_tmp.shape)
+        print("解码器 logits 测试：", vocab_logits_tmp.shape)
         vocab_logits = vocab_logits_tmp[:, 1:, :]
         emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
         return vocab_logits, emo_logits
