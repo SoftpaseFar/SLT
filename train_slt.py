@@ -5,7 +5,7 @@ import torch
 import yaml
 import argparse
 from pathlib import Path
-from transformers import MBartTokenizer
+from transformers import BartTokenizer
 import numpy as np
 import random
 from model import SLT
@@ -104,7 +104,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
     lang = {
         'How2SignDataset': 'en_XX',
         'P14TDataset': 'de_DE',
