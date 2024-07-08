@@ -9,7 +9,7 @@ import utils
 import argparse
 import numpy as np
 from pathlib import Path
-from transformers import MBartTokenizer
+from transformers import BartTokenizer
 from model import CLIP, TextDecoder
 # How2SignDataset、P14TDataset、CSLDailyDataset有用 动态加载
 from dataset import How2SignDataset
@@ -39,7 +39,7 @@ def get_args_parser():
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
     a_parser.add_argument('--pin_mem', action='store_true', default=True)
-    a_parser.add_argument('--num_workers', default=4, type=int)
+    a_parser.add_argument('--num_workers', default=1, type=int)
     # a_parser.add_argument('--num_workers', default=2, type=int)
     a_parser.add_argument('--checkpoints_dir', default='./checkpoints/')
     a_parser.add_argument('--log_dir', default='./log/')
@@ -99,7 +99,7 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
     lang = {
         'How2SignDataset': 'en_XX',
         'P14TDataset': 'de_DE',
@@ -336,16 +336,20 @@ def train_one_epoch(args, epoch, dataloader,
                                                                       txt_encoder=clip_train_dict[
                                                                           'clip_model'].get_txt_encoder())
                 loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-                print('tdm_logits: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]))
-                print('tgt_input: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1))
+                print('tdm_logits.shape: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]).shape)
+                print('tgt_input.shape: ', tgt_input['input_ids'].cuda().reshape(-1).shape)
+                print("tdm_logits.reshape(-1, tdm_logits.shape[-1])", tdm_logits.reshape(-1, tdm_logits.shape[-1]).shape)
+                print("tgt_input['input_ids'].cuda().reshape(-1)",
+                      tgt_input['input_ids'].cuda().reshape(-1).shape)
+                # [:, 2:]
                 vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+                                                tgt_input['input_ids'].cuda().reshape(-1)) * loss_lambda
 
                 # 将 logits 转换为概率分布
                 # emo_logits = F.softmax(emo_logits, dim=-1)
                 print('emo_logits: ', emo_logits)
                 print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
-                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (
+                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 1].cuda().reshape(-1)) * (
                         loss_lambda ** 3)
 
                 print(

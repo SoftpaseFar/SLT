@@ -100,7 +100,7 @@ class How2SignDataset(Dataset):
         for _, imgs_sample, tgt_sample, *other_data in batch:
             imgs_batch_tmp.append(imgs_sample)
             # tgt_sample 加入情感占位符
-            tgt_sample = '<pad>' + tgt_sample
+            tgt_sample = 'positive' + tgt_sample
             # 一个batch情感收集
             emo_batch_tmp.append('positive')
             tgt_batch.append(tgt_sample)
@@ -163,12 +163,17 @@ class How2SignDataset(Dataset):
                                    return_tensors="pt",
                                    padding=True,
                                    truncation=True)
+        print('未注入情感，tgt_input["input_ids"]: ', tgt_input['input_ids'])
 
         print(f"正在加载数据集 {self.args['dataset']} ...")
 
-        # 情感pad初进行情感注入
-        for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
-            tgt_input['input_ids'][i, 0] = value
+        # 情感pad初进行情感注入 句标标签
+        # for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
+        #     tgt_input['input_ids'][i, 1] = value
+        # tgt_input['input_ids'][i, 2] = -6
+
+        print('注入情感，tgt_input["input_ids"]: ', tgt_input['input_ids'])
+        print('注入情感，tgt_input["input_ids"].shape: ', tgt_input['input_ids'].shape)
 
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:

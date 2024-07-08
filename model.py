@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from transformers import MBartForConditionalGeneration
+from transformers import BartModel
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
+from nltk.translate.bleu_score import SmoothingFunction
 
 
 # 投影层
@@ -21,7 +22,7 @@ class TextCLIP(nn.Module):
     def __init__(self, config=None):
         super(TextCLIP, self).__init__()
         # 获取文本编码器
-        self.txt_encoder = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-cc25").get_encoder()
+        self.txt_encoder = BartModel.from_pretrained("facebook/bart-large").get_encoder()
         # 冻结编码器
         for param in self.txt_encoder.parameters():
             param.requires_grad = False
@@ -41,7 +42,16 @@ class TextCLIP(nn.Module):
         logits = self.projector(logits)
 
         # 获取句子编码
-        emo_voca_emb = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmax(dim=-1)]
+        print('句子编码处 tgt_input["input_ids"]', tgt_input['input_ids'])
+        print('句子编码处 tgt_input[“input_ids”].argmin(dim=-1)', tgt_input['input_ids'].argmin(dim=-1))
+        print('logits.shape[0]: ', logits.shape[0])
+        print('logits 形状: ', logits.shape)
+        print('torch.arange(logits.shape[0]): ', torch.arange(logits.shape[0]))
+        print("logits 值: ", logits)
+        # print("logits[0,1,:]", logits[1, 1, :])
+        emo_voca_emb = logits[torch.arange(logits.shape[0]), 1]
+        # tgt_input['input_ids'].argmin(dim=-1)
+        print("句子编码获取结束")
         # emotion = logits[torch.arange(logits.shape[0]), tgt_input['input_ids'].argmin(dim=-1)]
         return self.lm_head(emo_voca_emb), logits
 
@@ -132,42 +142,56 @@ class ImageCLIP(nn.Module):
 class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
-        self.MBart = MBartForConditionalGeneration.from_pretrained(
-            "facebook/mbart-large-cc25")
-        self.txt_decoder = self.MBart.get_decoder()
+        self.bart = BartModel.from_pretrained(
+            "facebook/bart-large")
+        self.txt_decoder = self.bart.get_decoder()
+
         # 冻结解码器
         for param in self.txt_decoder.parameters():
             param.requires_grad = False
+        for param in self.bart.parameters():
+            param.requires_grad = False
 
-        self.lm_head = self.MBart.get_output_embeddings()
-        self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
+        # self.lm_head = self.MBart.get_output_embeddings()
+        # self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
 
         # 情感层输出
-        self.emo_predict = nn.Linear(250027, 3)
+        self.emo_predict = nn.Linear(1024, 3)
 
         # 映射层
         self.projector_128_1024 = ProjectionLayer(input_dim=128, output_dim=1024)
 
+        # BLEU平滑层
+        self.smoothing_function = SmoothingFunction().method4
+
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
+        print('tgt_input["input_ids"]: ', tgt_input['input_ids'].shape)
         with torch.no_grad():
             _, encoder_hidden_states = txt_encoder(masked_tgt_input)
             # 维度映射
             encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
 
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
+        print('右移 decoder_input_ids: ', decoder_input_ids)
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids.cuda(),
             attention_mask=tgt_input['attention_mask'].cuda(),
 
-            encoder_hidden_states=encoder_hidden_states[:, 1:-2, :].cuda(),
-            encoder_attention_mask=masked_tgt_input['attention_mask'][:, 1:-2].cuda(),
+            # encoder_hidden_states=encoder_hidden_states[:, 1:-2, :].cuda(),
+            encoder_hidden_states=encoder_hidden_states.cuda(),
+            encoder_attention_mask=masked_tgt_input['attention_mask'].cuda(),
+            # encoder_attention_mask=masked_tgt_input['attention_mask'][:, 1:-2].cuda(),
 
             return_dict=True,
         )
-        vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
-        vocab_logits = vocab_logits_tmp[:, 1:, :]
-        emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
+        # vocab_logits_tmp = self.lm_head(decoder_out[0]) + self.final_logits_bias
+        vocab_logits_tmp = decoder_out.last_hidden_state
+        print("解码器 logits 测试：", vocab_logits_tmp)
+        print("解码器 logits.shape 测试：", vocab_logits_tmp.shape)
+        vocab_logits = vocab_logits_tmp
+        # vocab_logits = vocab_logits_tmp[:, 2:, :]
+        emo_logits = self.emo_predict(vocab_logits_tmp[:, 1, :])
         return vocab_logits, emo_logits
 
     # SLT阶段正向反馈

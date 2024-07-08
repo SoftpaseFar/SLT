@@ -12,16 +12,10 @@ WORD_MASK = "<mask>"
 emotion_vocab = {
     # Positive
     'positive': 1,
-    'positiv': 1,
-    '积极': 1,
 
     # Negative
     'negative': 2,
-    'negativ': 2,
-    '消极': 2,
 
     # neutral
     'neutral': 3,
-    'neutraler': 3,
-    '中性': 3,
 }
