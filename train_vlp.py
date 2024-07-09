@@ -309,58 +309,63 @@ def train_one_epoch(args, epoch, dataloader,
     emo_loss = criterion['loss_emo']
 
     for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
-        print(f"Epoch {epoch + 1} train, Step {step + 1}...")
+        try:
+            print(f"Epoch {epoch + 1} train, Step {step + 1}...")
 
-        # 解码器损失权重分配
-        vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
-        emo_weight = 1 / len(tgt_input['input_ids'])
-        masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+            # 解码器损失权重分配
+            vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+            emo_weight = 1 / len(tgt_input['input_ids'])
+            masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
 
-        # 刷新梯度
-        clip_train_dict['optimizer'].zero_grad()
-        # 采用自动混合精度
-        with torch.cuda.amp.autocast():
-            img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
-                                                                                             tgt_input)
-            loss_i_t = clip_loss(img_txt_s_matrix, ground_truth)
-            loss_t_i = clip_loss(txt_img_s_matrix, ground_truth)
-            clip_total_loss = (loss_i_t + loss_t_i) / 2.
-        # 根据梯度模型参数
-        loss_scaler(clip_total_loss, clip_train_dict['optimizer'])
-        clip_losses.append(clip_total_loss.item())
-
-        # 5个step 更新解码器
-        if step % 5 == 0:
-            td_train_dict['optimizer'].zero_grad()
+            # 刷新梯度
+            clip_train_dict['optimizer'].zero_grad()
+            # 采用自动混合精度
             with torch.cuda.amp.autocast():
-                tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
-                                                                      masked_tgt_input=masked_tgt_input,
-                                                                      txt_encoder=clip_train_dict[
-                                                                          'clip_model'].get_txt_encoder())
-                loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-                print('tdm_logits: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]))
-                print('tgt_input: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1))
-                vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+                img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
+                                                                                                 tgt_input)
+                loss_i_t = clip_loss(img_txt_s_matrix, ground_truth)
+                loss_t_i = clip_loss(txt_img_s_matrix, ground_truth)
+                clip_total_loss = (loss_i_t + loss_t_i) / 2.
+            # 根据梯度模型参数
+            loss_scaler(clip_total_loss, clip_train_dict['optimizer'])
+            clip_losses.append(clip_total_loss.item())
 
-                # 将 logits 转换为概率分布
-                # emo_logits = F.softmax(emo_logits, dim=-1)
-                print('emo_logits: ', emo_logits)
-                print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
-                emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (
-                        loss_lambda ** 3)
+            # 5个step 更新解码器
+            if step % 5 == 0:
+                td_train_dict['optimizer'].zero_grad()
+                with torch.cuda.amp.autocast():
+                    tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
+                                                                          masked_tgt_input=masked_tgt_input,
+                                                                          txt_encoder=clip_train_dict[
+                                                                              'clip_model'].get_txt_encoder())
+                    loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
+                    print('tdm_logits: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]))
+                    print('tgt_input: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1))
+                    vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
+                                                    tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
 
-                print(
-                    f"{Back.GREEN}"
-                    f"Training - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
-                    f"emo_masked_lm_loss: {emo_masked_lm_loss}"
-                    f"{Back.RESET}")
+                    # 将 logits 转换为概率分布
+                    # emo_logits = F.softmax(emo_logits, dim=-1)
+                    print('emo_logits: ', emo_logits)
+                    print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
+                    emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (
+                            loss_lambda ** 3)
 
-                masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
-                masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
-                # 根据梯度模型参数
-                loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
-                tdm_losses.append(masked_lm_loss.item())
+                    print(
+                        f"{Back.GREEN}"
+                        f"Training - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
+                        f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                        f"{Back.RESET}")
+
+                    masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
+                    masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
+                    # 根据梯度模型参数
+                    loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
+                    tdm_losses.append(masked_lm_loss.item())
+
+        except Exception as e:
+            print(f"在训练过程中遇到错误，跳过此step样本。错误信息：{e}")
+            continue
 
         # 梯度爆炸
         if not math.isfinite(clip_total_loss.item()):
@@ -399,54 +404,58 @@ def evaluate_one_epoch(args, epoch, dataloader,
 
     with torch.no_grad():
         for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
-            # -1 代表在测试数据集上
-            if epoch >= 0:
-                print('dev数据集上')
-                print(f"Epoch {epoch + 1} val, Step {step + 1}...")
-            else:
-                print('test数据集上')
-                print(f"Step {step + 1}...")
+            try:
+                # -1 代表在测试数据集上
+                if epoch >= 0:
+                    print('dev数据集上')
+                    print(f"Epoch {epoch + 1} val, Step {step + 1}...")
+                else:
+                    print('test数据集上')
+                    print(f"Step {step + 1}...")
 
-            # 解码器损失权重分配
-            vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
-            emo_weight = 1 / len(tgt_input['input_ids'])
-            masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+                # 解码器损失权重分配
+                vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+                emo_weight = 1 / len(tgt_input['input_ids'])
+                masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
 
-            # 采用自动混合精度
-            with torch.cuda.amp.autocast():
-                # clip 部分
-                img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
-                                                                                                 tgt_input)
+                # 采用自动混合精度
+                with torch.cuda.amp.autocast():
+                    # clip 部分
+                    img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
+                                                                                                     tgt_input)
 
-                loss_i_t = criterion['loss_clip'](img_txt_s_matrix, ground_truth)
-                loss_t_i = criterion['loss_clip'](txt_img_s_matrix, ground_truth)
-                clip_total_loss = (loss_i_t + loss_t_i) / 2.
-                clip_losses.append(clip_total_loss.item())
+                    loss_i_t = criterion['loss_clip'](img_txt_s_matrix, ground_truth)
+                    loss_t_i = criterion['loss_clip'](txt_img_s_matrix, ground_truth)
+                    clip_total_loss = (loss_i_t + loss_t_i) / 2.
+                    clip_losses.append(clip_total_loss.item())
 
-                # mask 部分
-                tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
-                                                                      masked_tgt_input=masked_tgt_input,
-                                                                      txt_encoder=clip_train_dict[
-                                                                          'clip_model'].get_txt_encoder())
-                loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-                vocab_masked_lm_loss = criterion['loss_vocab'](tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                               tgt_input['input_ids'][:, 1:].cuda().reshape(
-                                                                   -1)) * loss_lambda
+                    # mask 部分
+                    tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
+                                                                          masked_tgt_input=masked_tgt_input,
+                                                                          txt_encoder=clip_train_dict[
+                                                                              'clip_model'].get_txt_encoder())
+                    loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
+                    vocab_masked_lm_loss = criterion['loss_vocab'](tdm_logits.reshape(-1, tdm_logits.shape[-1]),
+                                                                   tgt_input['input_ids'][:, 1:].cuda().reshape(
+                                                                       -1)) * loss_lambda
 
-                emo_masked_lm_loss = criterion['loss_emo'](emo_logits,
-                                                           tgt_input['input_ids'][:, 0].cuda().reshape(
-                                                               -1)) * (loss_lambda ** 3)
+                    emo_masked_lm_loss = criterion['loss_emo'](emo_logits,
+                                                               tgt_input['input_ids'][:, 0].cuda().reshape(
+                                                                   -1)) * (loss_lambda ** 3)
 
-                print(
-                    f"{Back.GREEN}"
-                    f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
-                    f"emo_masked_lm_loss: {emo_masked_lm_loss}"
-                    f"{Back.RESET}")
+                    print(
+                        f"{Back.GREEN}"
+                        f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
+                        f"emo_masked_lm_loss: {emo_masked_lm_loss}"
+                        f"{Back.RESET}")
 
-                masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
-                masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
+                    masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
+                    masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
 
-                tdm_losses.append(masked_lm_loss.item())
+                    tdm_losses.append(masked_lm_loss.item())
+            except Exception as e:
+                print(f"在评估过程中遇到错误，跳过此step样本。错误信息：{e}")
+                continue
 
     avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
 

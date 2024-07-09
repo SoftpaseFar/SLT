@@ -310,42 +310,47 @@ def train_one_epoch(args, epoch,
     slt_train_dict['slt_model'].train(True)
 
     for step, (src_input, tgt_input) in enumerate(dataloader):
-        print(f"Epoch {epoch + 1} train, Step {step + 1}...")
-        # 解码器损失权重分配
-        vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
-        emo_weight = 1 / len(tgt_input['input_ids'])
-        masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+        # 丢弃异常样本
+        try:
+            print(f"Epoch {epoch + 1} train, Step {step + 1}...")
+            # 解码器损失权重分配
+            vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+            emo_weight = 1 / len(tgt_input['input_ids'])
+            masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
 
-        vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
+            vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
-        loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
+            loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
 
-        # loss_lambda = torch.tensor(args['loss_lambda'])
-        vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                                tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
-        emo_lm_loss = criterion['loss_emo'](emo_logits,
-                                            tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (loss_lambda ** 3)
+            # loss_lambda = torch.tensor(args['loss_lambda'])
+            vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
+                                                    tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
+            emo_lm_loss = criterion['loss_emo'](emo_logits,
+                                                tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (loss_lambda ** 3)
 
-        # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
+            # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
 
-        print(
-            f"{Back.GREEN}"
-            f"Training - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
-            f"emo_lm_loss: {emo_lm_loss}"
-            f"{Back.RESET}")
+            print(
+                f"{Back.GREEN}"
+                f"Training - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
+                f"emo_lm_loss: {emo_lm_loss}"
+                f"{Back.RESET}")
 
-        vocab_emo_loss = torch.stack([vocab_lm_loss, emo_lm_loss])
-        vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
-        # 梯度清零 梯度回传 更新梯度
-        slt_train_dict['optimizer'].zero_grad()
-        # 使用loss_scaler 的__call__方法进行损失的缩放和梯度更新
-        loss_scaler(vocab_emo_loss, slt_train_dict['optimizer'])
-        vocab_emo_losses.append(vocab_emo_loss.item())
+            vocab_emo_loss = torch.stack([vocab_lm_loss, emo_lm_loss])
+            vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
+            # 梯度清零 梯度回传 更新梯度
+            slt_train_dict['optimizer'].zero_grad()
+            # 使用loss_scaler 的__call__方法进行损失的缩放和梯度更新
+            loss_scaler(vocab_emo_loss, slt_train_dict['optimizer'])
+            vocab_emo_losses.append(vocab_emo_loss.item())
 
-        # 梯度爆炸
-        if not math.isfinite(vocab_emo_loss.item()):
-            print("CLIP Loss: {}, 结束训练".format(vocab_emo_loss.item()))
-            sys.exit(1)
+            # 梯度爆炸
+            if not math.isfinite(vocab_emo_loss.item()):
+                print("CLIP Loss: {}, 结束训练".format(vocab_emo_loss.item()))
+                sys.exit(1)
+        except Exception as e:
+            print(f"在训练过程中遇到错误，跳过此step样本。错误信息：{e}")
+            continue
 
     # 更新学习率
     slt_train_dict['lr_scheduler'].step(epoch)
@@ -383,70 +388,76 @@ def evaluate_one_epoch(args, epoch,
         vocab_emo_losses = []
 
         for step, (src_input, tgt_input) in enumerate(dataloader):
-            # -1 代表在测试数据集上
-            if epoch >= 0:
-                print(f"Epoch {epoch + 1} val, Step {step}...")
-            else:
-                print(f"Step {step}...")
+            # 丢弃异常样本
+            try:
+                # -1 代表在测试数据集上
+                if epoch >= 0:
+                    print(f"Epoch {epoch + 1} val, Step {step}...")
+                else:
+                    print(f"Step {step}...")
 
-            # 解码器损失权重分配
-            vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
-            emo_weight = 1 / len(tgt_input['input_ids'])
-            masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+                # 解码器损失权重分配
+                vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
+                emo_weight = 1 / len(tgt_input['input_ids'])
+                masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
 
-            # 计算损失
-            vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
+                # 计算损失
+                vocab_logits, emo_logits = slt_train_dict['slt_model'](src_input, tgt_input)
 
-            loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-            # loss_lambda = torch.tensor(args['loss_lambda'])
-            vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
-                                                    tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * (
-                                loss_lambda)
-            emo_lm_loss = criterion['loss_emo'](emo_logits,
-                                                tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (loss_lambda ** 3)
+                loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
+                # loss_lambda = torch.tensor(args['loss_lambda'])
+                vocab_lm_loss = criterion['loss_vocab'](vocab_logits.reshape(-1, vocab_logits.shape[-1]),
+                                                        tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * (
+                                    loss_lambda)
+                emo_lm_loss = criterion['loss_emo'](emo_logits,
+                                                    tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (
+                                      loss_lambda ** 3)
 
-            # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
+                # vocab_emo_loss = (vocab_lm_loss + emo_masked_lm_loss) / 2
 
-            print(
-                f"{Back.GREEN}"
-                f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
-                f"emo_lm_loss: {emo_lm_loss}"
-                f"{Back.RESET}")
+                print(
+                    f"{Back.GREEN}"
+                    f"Evaluation - Epoch: {epoch + 1}, vocab_lm_loss: {vocab_lm_loss}, "
+                    f"emo_lm_loss: {emo_lm_loss}"
+                    f"{Back.RESET}")
 
-            vocab_emo_loss = torch.stack([vocab_lm_loss, emo_lm_loss])
-            vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
-            vocab_emo_losses.append(vocab_emo_loss.item())
+                vocab_emo_loss = torch.stack([vocab_lm_loss, emo_lm_loss])
+                vocab_emo_loss = torch.mean(vocab_emo_loss * masked_lm_loss_weight)
+                vocab_emo_losses.append(vocab_emo_loss.item())
 
-            avg_vocab_emo_loss = sum(vocab_emo_losses) / len(vocab_emo_losses) if vocab_emo_losses else 0
+                avg_vocab_emo_loss = sum(vocab_emo_losses) / len(vocab_emo_losses) if vocab_emo_losses else 0
 
-            # 情感准确率计算数据准备
-            # 使用 tokenizer 解码每个样本
-            one_batch_emo_pres = utils.batch_decode(torch.argmax(vocab_logits[:, 0, :], dim=-1))
-            one_batch_emo_refs = utils.batch_decode(tgt_input['input_ids'][:, 0])
+                # 情感准确率计算数据准备
+                # 使用 tokenizer 解码每个样本
+                one_batch_emo_pres = utils.batch_decode(torch.argmax(vocab_logits[:, 0, :], dim=-1))
+                one_batch_emo_refs = utils.batch_decode(tgt_input['input_ids'][:, 0])
 
-            print(f"Epoch {epoch + 1} val, Step {step}, one_batch_emo_pres: {one_batch_emo_pres}")
-            print(f"Epoch {epoch + 1} val, Step {step}, one_batch_emo_refs: {one_batch_emo_refs}")
-            emo_pres.extend(one_batch_emo_pres)
-            emo_refs.extend(one_batch_emo_refs)
+                print(f"Epoch {epoch + 1} val, Step {step}, one_batch_emo_pres: {one_batch_emo_pres}")
+                print(f"Epoch {epoch + 1} val, Step {step}, one_batch_emo_refs: {one_batch_emo_refs}")
+                emo_pres.extend(one_batch_emo_pres)
+                emo_refs.extend(one_batch_emo_refs)
 
-            # BLEU分数计算数据准备
-            # 使用 tokenizer 解码每个样本
-            # one_batch_tgt_pres = tokenizer.batch_decode(torch.argmax(vocab_logits[:, 1:, :], dim=-1),
-            #                                             skip_special_tokens=True)
-            # 应用 Softmax 获取概率分布
-            probabilities = F.softmax(vocab_logits[:, 1:, :], dim=-1)
-            # 获取最大概率对应的 token IDs
-            predicted_ids = torch.argmax(probabilities, dim=-1)
-            print('predicted_ids: ', predicted_ids)
-            one_batch_tgt_pres = tokenizer.batch_decode(predicted_ids)
-            one_batch_tgt_refs = tokenizer.batch_decode(tgt_input['input_ids'][:, 1:],
-                                                        skip_special_tokens=True)
+                # BLEU分数计算数据准备
+                # 使用 tokenizer 解码每个样本
+                # one_batch_tgt_pres = tokenizer.batch_decode(torch.argmax(vocab_logits[:, 1:, :], dim=-1),
+                #                                             skip_special_tokens=True)
+                # 应用 Softmax 获取概率分布
+                probabilities = F.softmax(vocab_logits[:, 1:, :], dim=-1)
+                # 获取最大概率对应的 token IDs
+                predicted_ids = torch.argmax(probabilities, dim=-1)
+                print('predicted_ids: ', predicted_ids)
+                one_batch_tgt_pres = tokenizer.batch_decode(predicted_ids)
+                one_batch_tgt_refs = tokenizer.batch_decode(tgt_input['input_ids'][:, 1:],
+                                                            skip_special_tokens=True)
 
-            print(f"Epoch {epoch + 1} val, Step {step}, one_batch_tgt_pres: {one_batch_tgt_pres}")
-            print(f"Epoch {epoch + 1} val, Step {step}, one_batch_tgt_refs: {one_batch_tgt_refs}")
+                print(f"Epoch {epoch + 1} val, Step {step}, one_batch_tgt_pres: {one_batch_tgt_pres}")
+                print(f"Epoch {epoch + 1} val, Step {step}, one_batch_tgt_refs: {one_batch_tgt_refs}")
 
-            tgt_pres.extend(one_batch_tgt_pres)
-            tgt_refs.extend(one_batch_tgt_refs)
+                tgt_pres.extend(one_batch_tgt_pres)
+                tgt_refs.extend(one_batch_tgt_refs)
+            except Exception as e:
+                print(f"在评估过程中遇到错误，跳过此step样本。错误信息：{e}")
+                continue
 
         # 情感评估指标计算
         emo_accuracy = metrics.cal_emo_accuracy(emo_pres, emo_refs)
