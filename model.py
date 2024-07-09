@@ -99,7 +99,7 @@ class TemporalFeatures(nn.Module):
 
 # CLIP图像编码器
 class ImageCLIP(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args: dict):
         super(ImageCLIP, self).__init__()
         # 原始视频帧提取
         self.frames_emb = FramesFeatures()
@@ -108,11 +108,13 @@ class ImageCLIP(nn.Module):
         # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
         self.keypoints_tem = TemporalFeatures(input_size=54)
 
-    def forward(self, src_input, args):
+        self.args = args
+
+    def forward(self, src_input):
         imgs_ids = src_input['imgs_ids'].cuda()
         print('【测试】imgs_ids.shape:', imgs_ids.shape)
         keypoints_ids = None
-        if args['need_keypoints']:
+        if self.args['need_keypoints']:
             keypoints_ids = src_input['keypoints_ids'].cuda()
             print('【测试】keypoints_ids.shape:', keypoints_ids.shape)
         print('【测试】attention_mask.shape:', src_input['attention_mask'].shape)
@@ -122,7 +124,7 @@ class ImageCLIP(nn.Module):
         print('imgs_hidden:', imgs_hidden.shape)
 
         # hidden = None
-        if args['need_keypoints']:
+        if self.args['need_keypoints']:
             # 关键点信息提取
             keypoints_hidden = self.keypoints_tem(keypoints_ids)
             print('keypoints_hidden:', keypoints_hidden.shape)
@@ -212,7 +214,7 @@ class TextDecoder(nn.Module):
 
 # CLIP模型
 class CLIP(nn.Module):
-    def __init__(self, config, args):
+    def __init__(self, config, args: dict):
         super(CLIP, self).__init__()
         self.txt_encoder = TextCLIP(config=config)
         self.img_encoder = ImageCLIP(args)
@@ -256,7 +258,7 @@ class CLIP(nn.Module):
 
 # SLT模型
 class SLT(nn.Module):
-    def __init__(self, config, args):
+    def __init__(self, config, args: dict):
         super(SLT, self).__init__()
         # 视频编码器
         self.img_encoder = ImageCLIP(args)

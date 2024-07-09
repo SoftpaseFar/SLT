@@ -105,12 +105,14 @@ def main(args_, config):
 
     # 加载分词器
     tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
-    lang = {
-        'How2SignDataset': 'en_XX',
-        'P14TDataset': 'de_DE',
-        'CSLDailyDataset': 'zh_CN'
-    }
-    tokenizer.src_lang = lang[args['dataset']]
+    # lang = {
+    #     'How2SignDataset': 'en_XX',
+    #     'P14TDataset': 'de_DE',
+    #     'CSLDailyDataset': 'zh_CN'
+    # }
+    # tokenizer.src_lang = lang[args['dataset']]
+    tokenizer.src_lang = 'en_XX'
+    tokenizer.tgt_lang = 'en_XX'
 
     # 加载训练数据集
     # 训练数据集
