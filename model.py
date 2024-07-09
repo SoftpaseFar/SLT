@@ -99,7 +99,7 @@ class TemporalFeatures(nn.Module):
 
 # CLIP图像编码器
 class ImageCLIP(nn.Module):
-    def __init__(self):
+    def __init__(self, args):
         super(ImageCLIP, self).__init__()
         # 原始视频帧提取
         self.frames_emb = FramesFeatures()
@@ -108,21 +108,27 @@ class ImageCLIP(nn.Module):
         # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
         self.keypoints_tem = TemporalFeatures(input_size=54)
 
-    def forward(self, src_input):
+    def forward(self, src_input, args):
         imgs_ids = src_input['imgs_ids'].cuda()
         print('【测试】imgs_ids.shape:', imgs_ids.shape)
-        keypoints_ids = src_input['keypoints_ids'].cuda()
-        print('【测试】keypoints_ids.shape:', keypoints_ids.shape)
+        keypoints_ids = None
+        if args['need_keypoints']:
+            keypoints_ids = src_input['keypoints_ids'].cuda()
+            print('【测试】keypoints_ids.shape:', keypoints_ids.shape)
         print('【测试】attention_mask.shape:', src_input['attention_mask'].shape)
         # 原始视频特这个提取
         imgs_features = self.frames_emb(imgs_ids)
         imgs_hidden = self.frames_tem(imgs_features)
         print('imgs_hidden:', imgs_hidden.shape)
 
-        # 关键点信息提取
-        keypoints_hidden = self.keypoints_tem(keypoints_ids)
-        print('keypoints_hidden:', keypoints_hidden.shape)
-        hidden = (imgs_hidden + keypoints_hidden) / 2
+        # hidden = None
+        if args['need_keypoints']:
+            # 关键点信息提取
+            keypoints_hidden = self.keypoints_tem(keypoints_ids)
+            print('keypoints_hidden:', keypoints_hidden.shape)
+            hidden = (imgs_hidden + keypoints_hidden) / 2
+        else:
+            hidden = imgs_hidden
         head = hidden[:, -1, :]
         logits = hidden
         return head, logits
@@ -206,10 +212,10 @@ class TextDecoder(nn.Module):
 
 # CLIP模型
 class CLIP(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, args):
         super(CLIP, self).__init__()
         self.txt_encoder = TextCLIP(config=config)
-        self.img_encoder = ImageCLIP()
+        self.img_encoder = ImageCLIP(args)
 
         # logit缩放比率，可学习参数
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
@@ -250,10 +256,10 @@ class CLIP(nn.Module):
 
 # SLT模型
 class SLT(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, args):
         super(SLT, self).__init__()
         # 视频编码器
-        self.img_encoder = ImageCLIP()
+        self.img_encoder = ImageCLIP(args)
         # 文本解码器
         self.txt_decoder = TextDecoder(config=config)
 

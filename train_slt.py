@@ -156,7 +156,7 @@ def main(args_, config):
                                  drop_last=True)
 
     # SLT Model
-    slt_model = SLT(config=config)
+    slt_model = SLT(config=config, args=args)
     slt_model.to(device)
 
     # VLP阶段权重加载

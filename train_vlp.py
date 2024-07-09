@@ -159,7 +159,7 @@ def main(args_, config):
                                  drop_last=True)
 
     # CLIP Model
-    clip_model = CLIP(config=config)
+    clip_model = CLIP(config=config, args=args)
     clip_model.to(device)
 
     # 优化器 学习率调度器
