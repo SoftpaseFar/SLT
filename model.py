@@ -65,6 +65,11 @@ class FramesFeatures(nn.Module):
 
     def forward(self, input_ids):
         input_ids = input_ids.permute(0, 2, 1, 3, 4)  # 调整维度顺序为[batch_size, channels, depth, height, width]
+        # 检查输入数据的深度维度，如果小于3，则增加深度
+        if input_ids.size(2) < 3:
+            padding_size = 3 - input_ids.size(2)
+            input_ids = torch.nn.functional.pad(input_ids, (0, 0, 0, 0, 0, padding_size))
+
         src = self.relu(self.conv1(input_ids))
         # 调整维度为64
         # src = self.pool(src)
