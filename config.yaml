@@ -2,9 +2,9 @@
 How2SignDataset:
   videos_dir: ./data/How2Sign/videos/
   keypoints_dir: ./data/How2Sign/keypoints/
-  train_label_path: ./data/How2Sign/train.csv
-  dev_label_path: ./data/How2Sign/val.csv
-  test_label_path: ./data/How2Sign/test.csv
+  train_label_path: ./data/How2Sign/emo_train.csv
+  dev_label_path: ./data/How2Sign/emo_val.csv
+  test_label_path: ./data/How2Sign/emo_test.csv
   max_length: 300
 
 # PHOENIX-2014-T数据集参数
