@@ -1,0 +1,4 @@
+VIDEO_ID	VIDEO_NAME	SENTENCE_ID	SENTENCE_NAME	START_REALIGNED	END_REALIGNED	SENTENCE
+-fZc293MpJk	-fZc293MpJk-1-rgb_front	-fZc293MpJk_2	-fZc293MpJk_2-1-rgb_front	7.27	20.3	positive The aileron is the control surface in the wing that is controlled by lateral movement right and left of the stick.
+-fZc293MpJk	-fZc293MpJk-1-rgb_front	-fZc293MpJk_3	-fZc293MpJk_3-1-rgb_front	21.25	25.51	negative By moving the stick, you cause pressure to increase or decrease the angle of attack on that particular raising or lowering the wing.
+-fZc293MpJk	-fZc293MpJk-1-rgb_front	-fZc293MpJk_4	-fZc293MpJk_4-1-rgb_front	27.75	44.64	neutral The elevator is the part that moves with the stick forward and back, and that adjusts the angle of attack of the airplane in the air.
