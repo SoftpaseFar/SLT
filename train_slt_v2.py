@@ -199,14 +199,19 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
         # inputs, targets = batch['inputs'].to(device), batch['targets'].to(device)
         with torch.cuda.amp.autocast():
             vocab_logits, emo_logits = model(src_input, tgt_input)
-            print('vocab_logits: ', vocab_logits)
-            print('emo_logits: ', emo_logits)
-            print(" tgt_input['input_ids']", tgt_input['input_ids'])
+            # print('vocab_logits: ', vocab_logits)
+            # print('emo_logits: ', emo_logits)
+            # print(" tgt_input['input_ids']", tgt_input['input_ids'])
             # 调整形状以适应CrossEntropyLoss的输入要求
             # [batch_size * seq_len, vocab_size]
-            vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device) 
+            vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
+            print('vocab_logits_flat.shape: ', vocab_logits_flat.shape)
+
             # [batch_size * seq_len]
             tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
+            print('tgt_input_flat.shape: ', tgt_input_flat.shape)
+            print('tgt_input_flat: ', tgt_input_flat)
+
             loss = criterion(vocab_logits_flat, tgt_input_flat)
             print('loss: ', loss)
         scaler.scale(loss).backward()
