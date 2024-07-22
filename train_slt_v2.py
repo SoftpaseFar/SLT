@@ -199,9 +199,10 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
         # inputs, targets = batch['inputs'].to(device), batch['targets'].to(device)
         with torch.cuda.amp.autocast():
             vocab_logits, emo_logits = model(src_input, tgt_input)
-            print(vocab_logits)
-            print(emo_logits)
+            print('vocab_logits: ', vocab_logits)
+            print('emo_logits: ', emo_logits)
             loss = criterion(vocab_logits, tgt_input['input_ids'])
+            print('loss: ', loss)
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
