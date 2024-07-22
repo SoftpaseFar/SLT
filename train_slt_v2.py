@@ -162,7 +162,7 @@ def main(args_, config):
     slt_model = SLT(config=config, args=args)
     slt_model.to(device)
 
-    optimizer = create_optimizer(args, slt_model)
+    optimizer = create_optimizer(args_, slt_model)
     criterion = torch.nn.CrossEntropyLoss()
     scaler = NativeScaler()
 
