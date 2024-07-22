@@ -149,8 +149,8 @@ class TextDecoder(nn.Module):
             "facebook/mbart-large-cc25")
         self.txt_decoder = self.MBart.get_decoder()
         # 冻结解码器
-        for param in self.txt_decoder.parameters():
-            param.requires_grad = False
+        # for param in self.txt_decoder.parameters():
+        #     param.requires_grad = False
 
         self.lm_head = self.MBart.get_output_embeddings()
         self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
