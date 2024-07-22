@@ -25,6 +25,7 @@ from colorama import init, Back
 import metrics
 import torch.nn.functional as F
 from rouge import Rouge
+from torch.cuda.amp import GradScaler, autocast
 
 
 def get_args_parser():
@@ -197,7 +198,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
         # print(src_input)
         # print(tgt_input)
         # inputs, targets = batch['inputs'].to(device), batch['targets'].to(device)
-        with torch.cuda.amp.autocast():
+        with autocast():
             vocab_logits, emo_logits = model(src_input, tgt_input)
             # print('vocab_logits: ', vocab_logits)
             # print('emo_logits: ', emo_logits)
@@ -205,19 +206,20 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
             # 调整形状以适应CrossEntropyLoss的输入要求
             # [batch_size * seq_len, vocab_size]
             vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
-            print('vocab_logits_flat.shape: ', vocab_logits_flat.shape)
-            print('vocab_logits_flat:', vocab_logits_flat)
+            # print('vocab_logits_flat.shape: ', vocab_logits_flat.shape)
+            # print('vocab_logits_flat:', vocab_logits_flat)
 
             # [batch_size * seq_len]
             tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
-            print('tgt_input_flat.shape: ', tgt_input_flat.shape)
-            print('tgt_input_flat: ', tgt_input_flat)
+            # print('tgt_input_flat.shape: ', tgt_input_flat.shape)
+            # print('tgt_input_flat: ', tgt_input_flat)
 
             loss = criterion(vocab_logits_flat, tgt_input_flat)
             print('loss: ', loss)
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
+        scaler.scale(loss).backward()  # 使用 GradScaler 的 scale 方法
+        scaler.step(optimizer)  # 使用 GradScaler 的 step 方法
+        scaler.update()  # 使用 GradScaler 的 update 方法
+
         running_loss += loss.item() * src_input['input_ids'].size(0)
     epoch_loss = running_loss / len(dataloader.dataset)
     return epoch_loss
