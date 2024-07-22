@@ -202,7 +202,12 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
             print('vocab_logits: ', vocab_logits)
             print('emo_logits: ', emo_logits)
             print(" tgt_input['input_ids']", tgt_input['input_ids'])
-            loss = criterion(vocab_logits, tgt_input['input_ids'])
+            # 调整形状以适应CrossEntropyLoss的输入要求
+            # [batch_size * seq_len, vocab_size]
+            vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1))
+            # [batch_size * seq_len]
+            tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1)
+            loss = criterion(vocab_logits_flat, tgt_input_flat)
             print('loss: ', loss)
         scaler.scale(loss).backward()
         scaler.step(optimizer)
