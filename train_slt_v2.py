@@ -206,6 +206,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
             # [batch_size * seq_len, vocab_size]
             vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
             print('vocab_logits_flat.shape: ', vocab_logits_flat.shape)
+            print('vocab_logits_flat:', vocab_logits_flat)
 
             # [batch_size * seq_len]
             tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
