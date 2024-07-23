@@ -277,9 +277,12 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
                 print('hypotheses_batch: ', hypotheses_batch)
                 print('references_batch: ', references_batch)
 
-                # 收集解码后的预测和参考答案
-                hypotheses.extend(hypotheses_batch)
-                references.extend(references_batch)
+                # 检查并处理空预测结果
+                for hyp, ref in zip(hypotheses_batch, references_batch):
+                    if not hyp.strip():
+                        hyp = "<empty>"
+                    hypotheses.append(hyp)
+                    references.append(ref)
 
             except Exception as e:
                 print("数据错误，摒弃本数据。", e)
