@@ -171,7 +171,7 @@ def main(args_, config):
 
     best_loss = float('inf')
     for epoch in range(args['epochs']):
-        val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device)
+        val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
         train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
 
         print(
@@ -230,7 +230,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
     return epoch_loss
 
 
-def evaluate(model, dataloader, criterion, device):
+def evaluate(model, dataloader, criterion, device, tokenizer):
     model.eval()
     running_loss = 0.0
     references = []
@@ -248,11 +248,20 @@ def evaluate(model, dataloader, criterion, device):
                 print('val loss:', loss)
 
                 running_loss += loss.item() * src_input['imgs_ids'].size(0)
-                print("src_input['imgs_ids'].size(0): ", src_input['imgs_ids'].size(0))
+                # print("src_input['imgs_ids'].size(0): ", src_input['imgs_ids'].size(0))
                 print('val running_loss: ', running_loss)
 
-                references.extend(tgt_input['input_ids'].cpu().numpy())
-                hypotheses.extend(vocab_logits.argmax(dim=-1).cpu().numpy())
+                # 将ID序列转换为文本
+                references_batch = [tokenizer.decode(ref, skip_special_tokens=True) for ref in
+                                    tgt_input['input_ids'].cpu().numpy()]
+                hypotheses_batch = [tokenizer.decode(hyp, skip_special_tokens=True) for hyp in
+                                    vocab_logits.argmax(dim=-1).cpu().numpy()]
+                print('references_batch: ', references_batch)
+                print('hypotheses_batch: ', hypotheses_batch)
+
+                references.extend(references_batch)
+                hypotheses.extend(hypotheses_batch)
+
             except Exception as e:
                 print("数据错误，摒弃本数据。", e)
                 continue
