@@ -15,7 +15,7 @@ import csv
 from colorama import init, Back
 from transformers import MBartForConditionalGeneration, MBartConfig
 import yaml
-
+import gc
 
 # -------
 # 加载CSV文件
@@ -316,6 +316,8 @@ def clear_cuda_cache():
     torch.cuda.empty_cache()
     # 重置所有峰值显存统计信息
     torch.cuda.reset_peak_memory_stats()
+
+    gc.collect()
 
 
 if __name__ == '__main__':
