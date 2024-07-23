@@ -173,10 +173,19 @@ def main(args_, config):
     best_loss = float('inf')
     for epoch in range(args['epochs']):
         train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
+        utils.log('slt_train', epoch=epoch + 1,
+                  train_loss=train_loss
+                  )
+
         val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
 
         print(
             f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge:.2f}")
+        utils.log('slt_val', epoch=epoch + 1,
+                  val_loss=val_loss,
+                  bleu=bleu,
+                  rouge=rouge
+                  )
 
         lr_scheduler.step()
 
@@ -188,6 +197,11 @@ def main(args_, config):
     print("Training completed. Evaluating on test set...")
     test_loss, test_bleu, test_rouge = evaluate(slt_model, test_dataloader, criterion, device, tokenizer)
     print(f"Test Loss: {test_loss:.4f}, Test BLEU: {test_bleu:.2f}, Test ROUGE: {test_rouge:.2f}")
+    utils.log('slt_test',
+              test_loss=test_loss,
+              test_bleu=test_bleu,
+              test_rouge=test_rouge,
+              )
 
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
