@@ -248,6 +248,9 @@ def evaluate(model, dataloader, criterion, device):
                 print('val loss:', loss)
 
                 running_loss += loss.item() * src_input['imgs_ids'].size(0)
+                print("src_input['imgs_ids'].size(0): ", src_input['imgs_ids'].size(0))
+                print('val running_loss: ', running_loss)
+
                 references.extend(tgt_input['input_ids'].cpu().numpy())
                 hypotheses.extend(vocab_logits.argmax(dim=-1).cpu().numpy())
             except Exception as e:
