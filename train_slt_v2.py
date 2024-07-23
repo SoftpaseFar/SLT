@@ -5,7 +5,7 @@ import torch
 import yaml
 import argparse
 from pathlib import Path
-from transformers import MBartTokenizer
+from transformers import MBartTokenizer, AutoTokenizer
 import numpy as np
 import random
 from model_v2 import SLT
@@ -106,7 +106,8 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    # tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/mbart-large-cc25")
     # lang = {
     #     'How2SignDataset': 'en_XX',
     #     'P14TDataset': 'de_DE',
@@ -238,35 +239,41 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     with torch.no_grad():
         for batch in dataloader:
             try:
-                # inputs, targets = batch['inputs'].to(device), batch['targets'].to(device)
+                # 获取输入和目标数据
                 src_input, tgt_input = batch
 
+                # 模型前向传播
                 vocab_logits, emo_logits = model(src_input, tgt_input)
+
+                # 计算损失
                 vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
                 tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
                 loss = criterion(vocab_logits_flat, tgt_input_flat)
                 print('val loss:', loss)
 
+                # 累加损失
                 running_loss += loss.item() * src_input['imgs_ids'].size(0)
-                # print("src_input['imgs_ids'].size(0): ", src_input['imgs_ids'].size(0))
                 print('val running_loss: ', running_loss)
 
-                # 将ID序列转换为文本
-                references_batch = [tokenizer.decode(ref, skip_special_tokens=True) for ref in
-                                    tgt_input['input_ids'].cpu().numpy()]
-                hypotheses_batch = [tokenizer.decode(hyp, skip_special_tokens=True) for hyp in
-                                    vocab_logits.argmax(dim=-1).cpu().numpy()]
-                print('references_batch: ', references_batch)
-                print('hypotheses_batch: ', hypotheses_batch)
+                # 解码预测结果和参考答案
+                hypotheses_batch = tokenizer.batch_decode(vocab_logits.argmax(dim=-1), skip_special_tokens=True)
+                references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
 
-                references.extend(references_batch)
+                # 打印解码结果（用于调试）
+                print('hypotheses_batch: ', hypotheses_batch)
+                print('references_batch: ', references_batch)
+
+                # 收集解码后的预测和参考答案
                 hypotheses.extend(hypotheses_batch)
+                references.extend(references_batch)
 
             except Exception as e:
                 print("数据错误，摒弃本数据。", e)
                 continue
+
     epoch_loss = running_loss / len(dataloader.dataset)
 
+    # 计算 BLEU 和 ROUGE 分数
     bleu = BLEU().corpus_score(hypotheses, [references]).score
     rouge = Rouge().get_scores(hypotheses, references, avg=True)
 
