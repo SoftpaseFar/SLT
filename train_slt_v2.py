@@ -245,6 +245,7 @@ def evaluate(model, dataloader, criterion, device):
                 vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
                 tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
                 loss = criterion(vocab_logits_flat, tgt_input_flat)
+                print('val loss:', loss)
 
                 running_loss += loss.item() * src_input['imgs_ids'].size(0)
                 references.extend(tgt_input['input_ids'].cpu().numpy())
