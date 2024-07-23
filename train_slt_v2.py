@@ -165,7 +165,7 @@ def main(args_, config):
 
     optimizer = create_optimizer(args_, slt_model)
     criterion = torch.nn.CrossEntropyLoss()
-    scaler = NativeScaler()
+    scaler = GradScaler()
 
     lr_scheduler = scheduler.CosineAnnealingLR(optimizer, eta_min=args['min_lr'], T_max=args['epochs'])
 
