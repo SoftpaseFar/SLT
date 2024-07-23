@@ -277,6 +277,8 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     bleu = BLEU().corpus_score(hypotheses, [references]).score
     rouge = Rouge().get_scores(hypotheses, references, avg=True)
 
+    print('epoch_loss, bleu, rouge: ', epoch_loss, bleu, rouge)
+
     return epoch_loss, bleu, rouge
 
 
