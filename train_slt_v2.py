@@ -31,7 +31,7 @@ from torch.cuda.amp import GradScaler, autocast
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=1, type=int)
-    a_parser.add_argument('--epochs', default=20, type=int)
+    a_parser.add_argument('--epochs', default=5, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -219,9 +219,9 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
         scaler.scale(loss).backward()  # 使用 GradScaler 的 scale 方法
         scaler.step(optimizer)  # 使用 GradScaler 的 step 方法
         scaler.update()  # 使用 GradScaler 的 update 方法
-        print("src_input: ", src_input)
+        # print("src_input: ", src_input)
 
-        running_loss += loss.item() * src_input['input_ids'].size(0)
+        running_loss += loss.item() * src_input['imgs_ids'].size(0)
     epoch_loss = running_loss / len(dataloader.dataset)
     return epoch_loss
 
@@ -233,12 +233,17 @@ def evaluate(model, dataloader, criterion, device):
     hypotheses = []
     with torch.no_grad():
         for batch in dataloader:
-            inputs, targets = batch['inputs'].to(device), batch['targets'].to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            running_loss += loss.item() * inputs.size(0)
-            references.extend(targets.cpu().numpy())
-            hypotheses.extend(outputs.argmax(dim=-1).cpu().numpy())
+            # inputs, targets = batch['inputs'].to(device), batch['targets'].to(device)
+            src_input, tgt_input = batch
+
+            vocab_logits, emo_logits = model(src_input, tgt_input)
+            vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
+            tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
+            loss = criterion(vocab_logits_flat, tgt_input_flat)
+
+            running_loss += loss.item() * src_input['imgs_ids'].size(0)
+            references.extend(tgt_input['input_ids'].cpu().numpy())
+            hypotheses.extend(vocab_logits.argmax(dim=-1).cpu().numpy())
     epoch_loss = running_loss / len(dataloader.dataset)
 
     bleu = BLEU().corpus_score(hypotheses, [references]).score
