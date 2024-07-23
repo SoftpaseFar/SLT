@@ -172,11 +172,11 @@ def main(args_, config):
 
     best_loss = float('inf')
     for epoch in range(args['epochs']):
-        val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
         train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
+        val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
 
         print(
-            f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge['rouge-l']['f']:.2f}")
+            f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge:.2f}")
 
         lr_scheduler.step()
 
@@ -186,8 +186,8 @@ def main(args_, config):
                 torch.save(slt_model.state_dict(), os.path.join(args['checkpoints_dir'], 'best_model.pth'))
 
     print("Training completed. Evaluating on test set...")
-    test_loss, test_bleu, test_rouge = evaluate(slt_model, test_dataloader, criterion, device)
-    print(f"Test Loss: {test_loss:.4f}, Test BLEU: {test_bleu:.2f}, Test ROUGE: {test_rouge['rouge-l']['f']:.2f}")
+    test_loss, test_bleu, test_rouge = evaluate(slt_model, test_dataloader, criterion, device, tokenizer)
+    print(f"Test Loss: {test_loss:.4f}, Test BLEU: {test_bleu:.2f}, Test ROUGE: {test_rouge:.2f}")
 
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
@@ -277,9 +277,23 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     bleu = BLEU().corpus_score(hypotheses, [references])
     rouge = Rouge().get_scores(hypotheses, references, avg=True)
 
-    print('epoch_loss, bleu, rouge: ', epoch_loss, bleu, rouge)
+    # 解析 BLEU 分数
+    bleu1 = bleu.precisions[0]
+    bleu2 = bleu.precisions[1]
+    bleu3 = bleu.precisions[2]
+    bleu4 = bleu.precisions[3]
 
-    return epoch_loss, bleu, rouge
+    # 解析 ROUGE-L 分数
+    rouge_l = rouge['rouge-l']['f']
+
+    print(f"epoch_loss: {epoch_loss}")
+    print(f"BLEU-1: {bleu1}")
+    print(f"BLEU-2: {bleu2}")
+    print(f"BLEU-3: {bleu3}")
+    print(f"BLEU-4: {bleu4}")
+    print(f"ROUGE-L: {rouge_l}")
+
+    return epoch_loss, bleu4, rouge_l
 
 
 if __name__ == '__main__':
