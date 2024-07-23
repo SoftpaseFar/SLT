@@ -302,8 +302,9 @@ if __name__ == '__main__':
     if args.checkpoints_dir:
         Path(args.checkpoints_dir).mkdir(parents=True, exist_ok=True)
 
-    # 清理CUDA缓存
-    utils.clear_cuda_cache()
+    # # 清理CUDA缓存
+    # utils.clear_cuda_cache()
+    torch.cuda.empty_cache()
 
     # 开始训练
     main(args, config)
