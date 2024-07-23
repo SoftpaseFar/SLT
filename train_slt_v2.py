@@ -107,7 +107,7 @@ def main(args_, config):
 
     # 加载分词器
     # tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
-    tokenizer = AutoTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
     # lang = {
     #     'How2SignDataset': 'en_XX',
     #     'P14TDataset': 'de_DE',
@@ -274,7 +274,7 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     epoch_loss = running_loss / len(dataloader.dataset)
 
     # 计算 BLEU 和 ROUGE 分数
-    bleu = BLEU().corpus_score(hypotheses, [references]).score
+    bleu = BLEU().corpus_score(hypotheses, [references])
     rouge = Rouge().get_scores(hypotheses, references, avg=True)
 
     print('epoch_loss, bleu, rouge: ', epoch_loss, bleu, rouge)
