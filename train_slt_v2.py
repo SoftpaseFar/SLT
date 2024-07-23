@@ -219,6 +219,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
         scaler.scale(loss).backward()  # 使用 GradScaler 的 scale 方法
         scaler.step(optimizer)  # 使用 GradScaler 的 step 方法
         scaler.update()  # 使用 GradScaler 的 update 方法
+        print("src_input['input_ids']: ", src_input['input_ids'])
 
         running_loss += loss.item() * src_input['input_ids'].size(0)
     epoch_loss = running_loss / len(dataloader.dataset)
