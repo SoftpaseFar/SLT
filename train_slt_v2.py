@@ -30,7 +30,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=1, type=int)
+    a_parser.add_argument('--batch_size', default=8, type=int)
     a_parser.add_argument('--epochs', default=5, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
@@ -171,8 +171,8 @@ def main(args_, config):
 
     best_loss = float('inf')
     for epoch in range(args['epochs']):
-        train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
         val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device)
+        train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
 
         print(
             f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge['rouge-l']['f']:.2f}")
