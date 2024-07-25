@@ -260,6 +260,8 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
                 for hyp, ref in zip(hypotheses_batch, references_batch):
                     if not hyp.strip():
                         hyp = "<empty>"
+                    print('hyp: ', hyp)
+                    print('ref: ', ref)
                     emo_collection.append(utils.compare_first_words(hyp, ref))
                     hypotheses.append(hyp)
                     references.append(ref)
