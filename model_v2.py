@@ -152,8 +152,7 @@ class TextDecoder(nn.Module):
         vocab_logits_tmp = self.lm_head(decoder_out.last_hidden_state)
 
         vocab_logits = vocab_logits_tmp[:, 1:, :]
-        emo_logits = self.emo_predict(vocab_logits_tmp[:, 0, :])
-        return vocab_logits, emo_logits
+        return vocab_logits
 
     def forward(self, phase=None, tgt_input=None,
                 masked_tgt_input=None, txt_encoder=None,
@@ -179,9 +178,7 @@ class SLT(nn.Module):
         # 视频编码
         _, encoder_hidden_states = self.img_encoder(src_input)
         # 文本解码
-        vocab_logits, emo_logits = self.txt_decoder(phase='slt', tgt_input=tgt_input,
-                                                    encoder_hidden_states=encoder_hidden_states,
-                                                    encoder_attention_mask=src_input['attention_mask'])
-        return vocab_logits, emo_logits
-
-
+        vocab_logits = self.txt_decoder(phase='slt', tgt_input=tgt_input,
+                                        encoder_hidden_states=encoder_hidden_states,
+                                        encoder_attention_mask=src_input['attention_mask'])
+        return vocab_logits

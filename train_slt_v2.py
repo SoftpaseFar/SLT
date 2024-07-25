@@ -172,27 +172,31 @@ def main(args_, config):
 
     best_loss = float('inf')
     for epoch in range(args['epochs']):
-        train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
-        utils.log('slt_train', epoch=epoch + 1,
-                  train_loss=train_loss
-                  )
+        try:
+            train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
+            utils.log('slt_train', epoch=epoch + 1,
+                      train_loss=train_loss
+                      )
 
-        val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
+            val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
 
-        print(
-            f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge:.2f}")
-        utils.log('slt_val', epoch=epoch + 1,
-                  val_loss=val_loss,
-                  bleu=bleu,
-                  rouge=rouge
-                  )
+            print(
+                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge:.2f}")
+            utils.log('slt_val', epoch=epoch + 1,
+                      val_loss=val_loss,
+                      bleu=bleu,
+                      rouge=rouge
+                      )
 
-        lr_scheduler.step()
+            lr_scheduler.step()
 
-        if val_loss < best_loss:
-            best_loss = val_loss
-            if args['save_model']:
-                torch.save(slt_model.state_dict(), os.path.join(args['checkpoints_dir'], 'best_model.pth'))
+            if val_loss < best_loss:
+                best_loss = val_loss
+                if args['save_model']:
+                    torch.save(slt_model.state_dict(), os.path.join(args['checkpoints_dir'], 'best_model.pth'))
+        except Exception as e:
+            print(f"Epoch {epoch + 1} 出现错误。", e)
+            continue
 
     print("Training completed. Evaluating on test set...")
     test_loss, test_bleu, test_rouge = evaluate(slt_model, test_dataloader, criterion, device, tokenizer)
@@ -211,32 +215,15 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
         try:
             optimizer.zero_grad()
             src_input, tgt_input = batch
-            # print(src_input)
-            # print(tgt_input)
-            # inputs, targets = batch['inputs'].to(device), batch['targets'].to(device)
             with autocast():
-                vocab_logits, emo_logits = model(src_input, tgt_input)
-                # print('vocab_logits: ', vocab_logits)
-                # print('emo_logits: ', emo_logits)
-                # print(" tgt_input['input_ids']", tgt_input['input_ids'])
-                # 调整形状以适应CrossEntropyLoss的输入要求
-                # [batch_size * seq_len, vocab_size]
+                vocab_logits = model(src_input, tgt_input)
                 vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
-                # print('vocab_logits_flat.shape: ', vocab_logits_flat.shape)
-                # print('vocab_logits_flat:', vocab_logits_flat)
-
-                # [batch_size * seq_len]
                 tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
-                # print('tgt_input_flat.shape: ', tgt_input_flat.shape)
-                # print('tgt_input_flat: ', tgt_input_flat)
-
                 loss = criterion(vocab_logits_flat, tgt_input_flat)
                 print('loss: ', loss)
-            scaler.scale(loss).backward()  # 使用 GradScaler 的 scale 方法
-            scaler.step(optimizer)  # 使用 GradScaler 的 step 方法
-            scaler.update()  # 使用 GradScaler 的 update 方法
-            # print("src_input: ", src_input)
-
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             running_loss += loss.item() * src_input['imgs_ids'].size(0)
         except Exception as e:
             print("数据错误，摒弃本数据。", e)
@@ -253,31 +240,18 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     with torch.no_grad():
         for batch in dataloader:
             try:
-                # 获取输入和目标数据
                 src_input, tgt_input = batch
 
-                # 模型前向传播
-                vocab_logits, emo_logits = model(src_input, tgt_input)
-
-                # 计算损失
+                vocab_logits = model(src_input, tgt_input)
                 vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
                 tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
                 loss = criterion(vocab_logits_flat, tgt_input_flat)
-                print('val loss:', loss)
 
-                # 累加损失
                 running_loss += loss.item() * src_input['imgs_ids'].size(0)
-                print('val running_loss: ', running_loss)
 
-                # 解码预测结果和参考答案
                 hypotheses_batch = tokenizer.batch_decode(vocab_logits.argmax(dim=-1), skip_special_tokens=True)
                 references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
 
-                # 打印解码结果（用于调试）
-                print('hypotheses_batch: ', hypotheses_batch)
-                print('references_batch: ', references_batch)
-
-                # 检查并处理空预测结果
                 for hyp, ref in zip(hypotheses_batch, references_batch):
                     if not hyp.strip():
                         hyp = "<empty>"
@@ -294,13 +268,11 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     bleu = BLEU().corpus_score(hypotheses, [references])
     rouge = Rouge().get_scores(hypotheses, references, avg=True)
 
-    # 解析 BLEU 分数
+    # 解析 BLEU 和 ROUGE 分数
     bleu1 = bleu.precisions[0]
     bleu2 = bleu.precisions[1]
     bleu3 = bleu.precisions[2]
     bleu4 = bleu.precisions[3]
-
-    # 解析 ROUGE-L 分数
     rouge_l = rouge['rouge-l']['f']
 
     print(f"epoch_loss: {epoch_loss}")
