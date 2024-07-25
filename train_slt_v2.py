@@ -178,14 +178,15 @@ def main(args_, config):
                       train_loss=train_loss
                       )
 
-            val_loss, bleu, rouge = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
+            val_loss, bleu, rouge, emo_accuracy = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
 
             print(
-                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge:.2f}")
+                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge:.2f}, Accuracy: {emo_accuracy:.2f}")
             utils.log('slt_val', epoch=epoch + 1,
                       val_loss=val_loss,
                       bleu=bleu,
-                      rouge=rouge
+                      rouge=rouge,
+                      emo_acc=emo_accuracy
                       )
 
             lr_scheduler.step()
@@ -199,12 +200,15 @@ def main(args_, config):
             continue
 
     print("Training completed. Evaluating on test set...")
-    test_loss, test_bleu, test_rouge = evaluate(slt_model, test_dataloader, criterion, device, tokenizer)
-    print(f"Test Loss: {test_loss:.4f}, Test BLEU: {test_bleu:.2f}, Test ROUGE: {test_rouge:.2f}")
+    test_loss, test_bleu, test_rouge, test_emo_accuracy = evaluate(slt_model, test_dataloader, criterion, device,
+                                                                   tokenizer)
+    print(
+        f"Test Loss: {test_loss:.4f}, Test BLEU: {test_bleu:.2f}, Test ROUGE: {test_rouge:.2f}, Accuracy: {test_emo_accuracy:.2f}")
     utils.log('slt_test',
               test_loss=test_loss,
               test_bleu=test_bleu,
               test_rouge=test_rouge,
+              test_emo_acc=test_emo_accuracy
               )
 
 
@@ -237,6 +241,7 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     running_loss = 0.0
     references = []
     hypotheses = []
+    emo_collection = []
     with torch.no_grad():
         for batch in dataloader:
             try:
@@ -255,13 +260,17 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
                 for hyp, ref in zip(hypotheses_batch, references_batch):
                     if not hyp.strip():
                         hyp = "<empty>"
+                    emo_collection.append(utils.compare_first_words(hyp, ref))
                     hypotheses.append(hyp)
                     references.append(ref)
 
             except Exception as e:
                 print("数据错误，摒弃本数据。", e)
                 continue
+    # 情感准确率
+    emo_accuracy = utils.calculate_ratio_of_ones(emo_collection)
 
+    # 计算 LOSS
     epoch_loss = running_loss / len(dataloader.dataset)
 
     # 计算 BLEU 和 ROUGE 分数
@@ -282,7 +291,7 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     print(f"BLEU-4: {bleu4}")
     print(f"ROUGE-L: {rouge_l}")
 
-    return epoch_loss, bleu4, rouge_l
+    return epoch_loss, bleu4, rouge_l, emo_accuracy
 
 
 if __name__ == '__main__':

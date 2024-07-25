@@ -16,6 +16,8 @@ from colorama import init, Back
 from transformers import MBartForConditionalGeneration, MBartConfig
 import yaml
 import gc
+import re
+
 
 # -------
 # 加载CSV文件
@@ -318,6 +320,29 @@ def clear_cuda_cache():
     torch.cuda.reset_peak_memory_stats()
 
     gc.collect()
+
+
+# -------
+# 情感准确率计算
+def get_first_word(text):
+    # 使用正则表达式匹配第一个单词
+    match = re.search(r'\b\w+\b', text)
+    return match.group(0) if match else ''
+
+
+def compare_first_words(hyp, ref):
+    hyp_first_word = get_first_word(hyp)
+    ref_first_word = get_first_word(ref)
+    return 1 if hyp_first_word == ref_first_word else 0
+
+
+def calculate_ratio_of_ones(emo_collection):
+    total = len(emo_collection)
+    if total == 0:
+        return 0  # 避免除以零
+    count_of_ones = emo_collection.count(1)
+    ratio_of_ones = count_of_ones / total
+    return ratio_of_ones
 
 
 if __name__ == '__main__':
