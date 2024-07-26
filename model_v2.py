@@ -22,6 +22,10 @@ class FramesFeatures(nn.Module):
         super(FramesFeatures, self).__init__()
         self.conv1 = nn.Conv3d(in_channels=3, out_channels=64, kernel_size=(3, 3, 3), stride=(1, 1, 1),
                                padding=(1, 1, 1))
+
+        self.conv2 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
+        self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
 
     def forward(self, input_ids):
@@ -33,6 +37,8 @@ class FramesFeatures(nn.Module):
             input_ids = torch.nn.functional.pad(input_ids, (0, 0, 0, 0, 0, padding_size))
 
         src = self.relu(self.conv1(input_ids))
+        src = self.pool(src)
+        src = self.relu(self.conv2(src))
         src = torch.mean(src, dim=[-2, -1])
         # 将维度调整为[batch_size, depth, channels]
         features = src.permute(0, 2, 1)
@@ -41,7 +47,7 @@ class FramesFeatures(nn.Module):
 
 # 时间特征提取；
 class TemporalFeatures(nn.Module):
-    def __init__(self, input_size=64, hidden_size=128, num_layers=1, batch_first=True):
+    def __init__(self, input_size=64, hidden_size=128, num_layers=2, batch_first=True):
         super(TemporalFeatures, self).__init__()
         self.gru = nn.GRU(input_size=input_size,
                           hidden_size=hidden_size,
@@ -61,7 +67,7 @@ class ImageEncoder(nn.Module):
         super(ImageEncoder, self).__init__()
         # 原始视频帧提取
         self.frames_emb = FramesFeatures()
-        self.frames_tem = TemporalFeatures(input_size=64)
+        self.frames_tem = TemporalFeatures(input_size=128)
 
         # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
         self.keypoints_tem = TemporalFeatures(input_size=54)
