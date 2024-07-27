@@ -47,7 +47,7 @@ class FramesFeatures(nn.Module):
 
 # 时间特征提取；
 class TemporalFeatures(nn.Module):
-    def __init__(self, input_size=64, hidden_size=128, num_layers=1, batch_first=True):
+    def __init__(self, input_size=64, hidden_size=128, num_layers=2, batch_first=True):
         super(TemporalFeatures, self).__init__()
         self.gru = nn.GRU(input_size=input_size,
                           hidden_size=hidden_size,
