@@ -25,6 +25,8 @@ class FramesFeatures(nn.Module):
 
         self.conv2 = nn.Conv3d(in_channels=64, out_channels=128, kernel_size=(3, 3, 3), stride=(1, 1, 1),
                                padding=(1, 1, 1))
+        self.conv3 = nn.Conv3d(in_channels=128, out_channels=256, kernel_size=(3, 3, 3), stride=(1, 1, 1),
+                               padding=(1, 1, 1))
         self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
 
@@ -39,6 +41,9 @@ class FramesFeatures(nn.Module):
         src = self.relu(self.conv1(input_ids))
         src = self.pool(src)
         src = self.relu(self.conv2(src))
+        src = self.pool(src)
+        src = self.relu(self.conv3(src))
+
         src = torch.mean(src, dim=[-2, -1])
         # 将维度调整为[batch_size, depth, channels]
         features = src.permute(0, 2, 1)
@@ -47,7 +52,7 @@ class FramesFeatures(nn.Module):
 
 # 时间特征提取；
 class TemporalFeatures(nn.Module):
-    def __init__(self, input_size=64, hidden_size=128, num_layers=2, batch_first=True):
+    def __init__(self, input_size=64, hidden_size=256, num_layers=1, batch_first=True):
         super(TemporalFeatures, self).__init__()
         self.gru = nn.GRU(input_size=input_size,
                           hidden_size=hidden_size,
@@ -67,7 +72,7 @@ class ImageEncoder(nn.Module):
         super(ImageEncoder, self).__init__()
         # 原始视频帧提取
         self.frames_emb = FramesFeatures()
-        self.frames_tem = TemporalFeatures(input_size=128)
+        self.frames_tem = TemporalFeatures(input_size=256)
 
         # 关键点信息提取 keypoints本身具备空间信息，只需要时间建模
         self.keypoints_tem = TemporalFeatures(input_size=54)
@@ -111,14 +116,14 @@ class TextDecoder(nn.Module):
         self.register_buffer("final_logits_bias", torch.zeros((1, self.MBart.model.shared.num_embeddings)))
 
         # 映射层
-        self.projector_128_1024 = ProjectionLayer(input_dim=128, output_dim=1024)
+        self.projector_256_1024 = ProjectionLayer(input_dim=256, output_dim=1024)
 
     # CLIP阶段正向反馈
     def forward_clip(self, tgt_input, masked_tgt_input, txt_encoder):
         with torch.no_grad():
             _, encoder_hidden_states = txt_encoder(masked_tgt_input)
             # 维度映射
-            encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
+            encoder_hidden_states = self.projector_256_1024(encoder_hidden_states)
 
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'], self.txt_decoder.config.pad_token_id)
         decoder_out = self.txt_decoder(
