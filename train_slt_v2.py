@@ -178,14 +178,19 @@ def main(args_, config):
                       train_loss=train_loss
                       )
 
-            val_loss, bleu, rouge, emo_accuracy = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
+            # val_loss, bleu, rouge, emo_accuracy = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
+            val_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy = evaluate(slt_model, val_dataloader,
+                                                                                   criterion, device, tokenizer)
 
             print(
-                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU: {bleu:.2f}, ROUGE: {rouge:.2f}, Accuracy: {emo_accuracy:.2f}")
+                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU-4: {bleu4:.2f}, ROUGE-l: {rouge_l:.2f}, Accuracy: {emo_accuracy:.2f}")
             utils.log('slt_val', epoch=epoch + 1,
                       val_loss=val_loss,
-                      bleu=bleu,
-                      rouge=rouge,
+                      bleu1=bleu1,
+                      bleu2=bleu2,
+                      bleu3=bleu3,
+                      bleu4=bleu4,
+                      rouge_l=rouge_l,
                       emo_acc=emo_accuracy
                       )
 
@@ -200,14 +205,26 @@ def main(args_, config):
             continue
 
     print("Training completed. Evaluating on test set...")
-    test_loss, test_bleu, test_rouge, test_emo_accuracy = evaluate(slt_model, test_dataloader, criterion, device,
-                                                                   tokenizer)
+    # test_loss, test_bleu, test_rouge, test_emo_accuracy = evaluate(slt_model, test_dataloader, criterion, device,
+    #                                                                tokenizer)
+    (test_loss, test_bleu1,
+     test_bleu2, test_bleu3,
+     test_bleu4, test_rouge_l,
+     test_emo_accuracy) = evaluate(slt_model,
+                                   test_dataloader,
+                                   criterion,
+                                   device,
+                                   tokenizer)
     print(
-        f"Test Loss: {test_loss:.4f}, Test BLEU: {test_bleu:.2f}, Test ROUGE: {test_rouge:.2f}, Accuracy: {test_emo_accuracy:.2f}")
+        f"Test Loss: {test_loss:.4f}, Test BLEU-4: {test_bleu4:.2f}, Test ROUGE-l: {test_rouge_l:.2f}, "
+        f"Accuracy: {test_emo_accuracy:.2f}")
     utils.log('slt_test',
               test_loss=test_loss,
-              test_bleu=test_bleu,
-              test_rouge=test_rouge,
+              test_bleu1=test_bleu1,
+              test_bleu2=test_bleu2,
+              test_bleu3=test_bleu3,
+              test_bleu4=test_bleu4,
+              test_rouge_l=test_rouge_l,
               test_emo_acc=test_emo_accuracy
               )
 
@@ -293,7 +310,7 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     print(f"BLEU-4: {bleu4}")
     print(f"ROUGE-L: {rouge_l}")
 
-    return epoch_loss, bleu4, rouge_l, emo_accuracy
+    return epoch_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy
 
 
 if __name__ == '__main__':
