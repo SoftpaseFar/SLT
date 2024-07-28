@@ -145,7 +145,7 @@ class TextDecoder(nn.Module):
         decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
                                                self.txt_decoder.config.pad_token_id)
         # 维度映射
-        encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
+        encoder_hidden_states = self.projector_256_1024(encoder_hidden_states)
 
         decoder_out = self.txt_decoder(
             input_ids=decoder_input_ids.cuda(),
