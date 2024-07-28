@@ -280,6 +280,8 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
                     print('hyp: ', hyp)
                     print('ref: ', ref)
                     emo_collection.append(utils.compare_first_words(hyp, ref))
+                    hyp = utils.correct_spelling(utils.remove_duplicates(hyp))
+                    ref = utils.correct_spelling(utils.remove_duplicates(ref))
                     hypotheses.append(hyp)
                     references.append(ref)
 

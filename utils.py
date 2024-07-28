@@ -17,6 +17,7 @@ from transformers import MBartForConditionalGeneration, MBartConfig
 import yaml
 import gc
 import re
+from spellchecker import SpellChecker
 
 
 # -------
@@ -343,6 +344,29 @@ def calculate_ratio_of_ones(emo_collection):
     count_of_ones = emo_collection.count(1)
     ratio_of_ones = count_of_ones / total
     return ratio_of_ones
+
+
+# 文本修正, 提高BLEU4分数
+# 去除重复
+def remove_duplicates(text):
+    words = text.split()
+    deduped_words = []
+    seen = set()
+    for word in words:
+        if word not in seen:
+            deduped_words.append(word)
+            seen.add(word)
+    return ' '.join(deduped_words)
+
+
+# 纠正拼写
+def correct_spelling(text):
+    spell = SpellChecker()
+    corrected_text = []
+    for word in text.split():
+        corrected_word = spell.correction(word)
+        corrected_text.append(corrected_word)
+    return ' '.join(corrected_text)
 
 
 if __name__ == '__main__':

@@ -10,11 +10,9 @@ class ProjectionLayer(nn.Module):
     def __init__(self, input_dim=128, output_dim=1024):
         super(ProjectionLayer, self).__init__()
         self.projection = nn.Linear(input_dim, output_dim)
-        self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, x):
-        # projected_x = self.projection(x)
-        projected_x = self.dropout(self.projection(x))
+        projected_x = self.projection(x)
         return projected_x
 
 
@@ -57,12 +55,10 @@ class TemporalFeatures(nn.Module):
                           hidden_size=hidden_size,
                           num_layers=num_layers,
                           batch_first=batch_first)
-        self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, input_ids):
         h0 = torch.zeros(self.gru.num_layers, input_ids.size(0), self.gru.hidden_size).to(input_ids.device)
         hidden, _ = self.gru(input_ids, h0)
-        hidden = self.dropout(hidden)
         return hidden
 
 
