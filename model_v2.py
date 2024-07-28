@@ -27,7 +27,6 @@ class FramesFeatures(nn.Module):
                                padding=(1, 1, 1))
         self.pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, input_ids):
         # 调整维度顺序为[batch_size, channels, depth, height, width]
@@ -41,7 +40,6 @@ class FramesFeatures(nn.Module):
         src = self.pool(src)
         src = self.relu(self.conv2(src))
         src = torch.mean(src, dim=[-2, -1])
-        src = self.dropout(src)
         # 将维度调整为[batch_size, depth, channels]
         features = src.permute(0, 2, 1)
         return features
