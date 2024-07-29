@@ -233,7 +233,56 @@ def main(args_, config):
               )
 
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
+def label_smoothing_loss(pred, target, smoothing=0.1):
+    """
+    标签平滑损失函数
+    """
+    confidence = 1.0 - smoothing
+    log_probs = F.log_softmax(pred, dim=-1)
+    nll_loss = -log_probs.gather(dim=-1, index=target.unsqueeze(1))
+    nll_loss = nll_loss.squeeze(1)
+    smooth_loss = -log_probs.mean(dim=-1)
+    loss = confidence * nll_loss + smoothing * smooth_loss
+    return loss.mean()
+
+
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: GradScaler, scheduler=None,
+                    clip_grad_norm=1.0):
+    model.train()
+    running_loss = 0.0
+    for batch in dataloader:
+        try:
+            optimizer.zero_grad()
+            src_input, tgt_input = batch
+            with autocast():
+                vocab_logits = model(src_input, tgt_input)
+                vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
+                tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
+
+                # 使用标签平滑损失
+                loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat, smoothing=0.1)
+                print('loss: ', loss)
+
+            scaler.scale(loss).backward()
+
+            # 梯度裁剪
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
+
+            scaler.step(optimizer)
+            scaler.update()
+            running_loss += loss.item() * src_input['imgs_ids'].size(0)
+
+            if scheduler is not None:
+                scheduler.step()
+        except Exception as e:
+            print("数据错误，摒弃本数据。", e)
+            continue
+
+    epoch_loss = running_loss / len(dataloader.dataset)
+    return epoch_loss
+
+
+def train_one_epoch_ori(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
     model.train()
     running_loss = 0.0
     for batch in dataloader:
@@ -299,20 +348,20 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     epoch_loss = running_loss / len(dataloader.dataset)
 
     # 计算 BLEU 和 ROUGE 分数
-    # bleu = BLEU().corpus_score(hypotheses, [references])
+    bleu = BLEU().corpus_score(hypotheses, [references])
     # 计算 BLEU 分数
-    smoothing_function = SmoothingFunction().method4
-    bleu1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0), smoothing_function=smoothing_function)
-    bleu2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0), smoothing_function=smoothing_function)
-    bleu3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0), smoothing_function=smoothing_function)
-    bleu4 = corpus_bleu(references, hypotheses, weights=(0.25, 0.25, 0.25, 0.25), smoothing_function=smoothing_function)
-    rouge = Rouge().get_scores(hypotheses, references, avg=True)
 
+    rouge = Rouge().get_scores(hypotheses, references, avg=True)
+    # smoothing_function = SmoothingFunction().method4
+    # bleu1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0), smoothing_function=smoothing_function)
+    # bleu2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0), smoothing_function=smoothing_function)
+    # bleu3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0), smoothing_function=smoothing_function)
+    # bleu4 = corpus_bleu(references, hypotheses, weights=(0.25, 0.25, 0.25, 0.25), smoothing_function=smoothing_function)
     # 解析 BLEU 和 ROUGE 分数
-    # bleu1 = bleu.precisions[0]
-    # bleu2 = bleu.precisions[1]
-    # bleu3 = bleu.precisions[2]
-    # bleu4 = bleu.precisions[3]
+    bleu1 = bleu.precisions[0]
+    bleu2 = bleu.precisions[1]
+    bleu3 = bleu.precisions[2]
+    bleu4 = bleu.precisions[3]
     rouge_l = rouge['rouge-l']['f']
 
     print(f"epoch_loss: {epoch_loss}")
