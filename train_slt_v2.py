@@ -23,10 +23,12 @@ from sacrebleu.metrics import BLEU
 import multiprocessing
 from colorama import init, Back
 import metrics
-import torch.nn.functional as F
 from rouge import Rouge
 from torch.cuda.amp import GradScaler, autocast
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+import torch
+import torch.nn.functional as F
+from torchtext.data.metrics import bleu_score
 
 
 def get_args_parser():
@@ -234,52 +236,69 @@ def main(args_, config):
 
 
 def label_smoothing_loss(pred, target, smoothing=0.1):
-    """
-    标签平滑损失函数
-    """
-    confidence = 1.0 - smoothing
+    n_classes = pred.size(-1)
+    one_hot = torch.zeros_like(pred).scatter(1, target.unsqueeze(1), 1)
+    smoothed = one_hot * (1 - smoothing) + smoothing / n_classes
     log_probs = F.log_softmax(pred, dim=-1)
-    nll_loss = -log_probs.gather(dim=-1, index=target.unsqueeze(1))
-    nll_loss = nll_loss.squeeze(1)
-    smooth_loss = -log_probs.mean(dim=-1)
-    loss = confidence * nll_loss + smoothing * smooth_loss
-    return loss.mean()
+    loss = -(smoothed * log_probs).sum(dim=-1).mean()
+    return loss
 
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: GradScaler, scheduler=None,
-                    clip_grad_norm=1.0):
+def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.5):
+    # Label smoothing loss
+    loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
+
+    # Compute BLEU score
+    bleu = bleu_score(hypotheses, [references])
+
+    # Combine losses
+    total_loss = (1 - alpha) * loss - alpha * bleu
+    return total_loss, bleu
+
+
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tokenizer, clip_grad_norm=1.0):
     model.train()
     running_loss = 0.0
+    total_bleu = 0.0
+
     for batch in dataloader:
         try:
             optimizer.zero_grad()
             src_input, tgt_input = batch
+
             with autocast():
                 vocab_logits = model(src_input, tgt_input)
                 vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
                 tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
 
-                # 使用标签平滑损失
-                loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat, smoothing=0.1)
+                # Decode the hypotheses and references
+                hypotheses_batch = tokenizer.batch_decode(vocab_logits.argmax(dim=-1), skip_special_tokens=True)
+                references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
+
+                # Calculate custom loss
+                loss, bleu = custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses_batch, references_batch)
                 print('loss: ', loss)
+                print('BLEU: ', bleu)
 
             scaler.scale(loss).backward()
 
-            # 梯度裁剪
+            # Gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
 
             scaler.step(optimizer)
             scaler.update()
-            running_loss += loss.item() * src_input['imgs_ids'].size(0)
 
-            if scheduler is not None:
-                scheduler.step()
+            running_loss += loss.item() * src_input['imgs_ids'].size(0)
+            total_bleu += bleu * src_input['imgs_ids'].size(0)
+
         except Exception as e:
             print("数据错误，摒弃本数据。", e)
             continue
 
     epoch_loss = running_loss / len(dataloader.dataset)
-    return epoch_loss
+    epoch_bleu = total_bleu / len(dataloader.dataset)
+
+    return epoch_loss, epoch_bleu
 
 
 def train_one_epoch_ori(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
@@ -356,7 +375,9 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     # bleu1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0), smoothing_function=smoothing_function)
     # bleu2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0), smoothing_function=smoothing_function)
     # bleu3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0), smoothing_function=smoothing_function)
-    # bleu4 = corpus_bleu(references, hypotheses, weights=(0.25, 0.25, 0.25, 0.25), smoothing_function=smoothing_function)
+    # bleu4 = corpus_bleu(references, hypotheses, weights=(0.25, 0.25, 0.25, 0.25),
+    # smoothing_function=smoothing_function)
+
     # 解析 BLEU 和 ROUGE 分数
     bleu1 = bleu.precisions[0]
     bleu2 = bleu.precisions[1]
