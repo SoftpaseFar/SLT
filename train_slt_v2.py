@@ -175,9 +175,12 @@ def main(args_, config):
     best_loss = float('inf')
     for epoch in range(args['epochs']):
         try:
-            train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler, tokenizer)
+            train_loss, bleu_score = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler,
+                                                     tokenizer)
+
             utils.log('slt_train', epoch=epoch + 1,
-                      train_loss=train_loss
+                      train_loss=train_loss,
+                      bleu4=bleu_score
                       )
 
             # val_loss, bleu, rouge, emo_accuracy = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
@@ -243,26 +246,32 @@ def label_smoothing_loss(pred, target, smoothing=0.1):
     return loss
 
 
+def compute_bleu_score(hypotheses, references):
+    # BLEU score needs hypotheses and references as lists of strings
+    return corpus_bleu([references], hypotheses)
+
+
 def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.5):
     # Label smoothing loss
     loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
 
-    # Tokenize hypotheses and references
-    tokenized_hypotheses = [hyp.split() for hyp in hypotheses]
-    tokenized_references = [[ref.split()] for ref in references]
-
     # Compute BLEU score
-    bleu = corpus_bleu(tokenized_references, tokenized_hypotheses, smoothing_function=SmoothingFunction().method4)
+    bleu_score = compute_bleu_score(hypotheses, references)
+
+    # Convert BLEU score to loss (higher BLEU score means lower loss)
+    bleu_loss = 1 - bleu_score
 
     # Combine losses
-    total_loss = (1 - alpha) * loss - alpha * bleu
-    return total_loss, bleu
+    total_loss = (1 - alpha) * loss + alpha * bleu_loss
+
+    return total_loss, bleu_score
 
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tokenizer, clip_grad_norm=1.0):
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tokenizer, clip_grad_norm=1.0, alpha=0.5):
     model.train()
     running_loss = 0.0
     total_bleu = 0.0
+    num_batches = len(dataloader)
 
     for batch in dataloader:
         try:
@@ -279,9 +288,9 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tok
                 references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
 
                 # Calculate custom loss
-                loss, bleu = custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses_batch, references_batch)
-                print('loss: ', loss)
-                print('BLEU: ', bleu)
+                loss, bleu_score = custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses_batch, references_batch)
+                print('loss: ', loss.item())
+                print('BLEU: ', bleu_score)
 
             scaler.scale(loss).backward()
 
@@ -292,16 +301,16 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tok
             scaler.update()
 
             running_loss += loss.item() * src_input['imgs_ids'].size(0)
-            total_bleu += bleu * src_input['imgs_ids'].size(0)
+            total_bleu += bleu_score
 
         except Exception as e:
             print("数据错误，摒弃本数据。", e)
             continue
 
     epoch_loss = running_loss / len(dataloader.dataset)
-    epoch_bleu = total_bleu / len(dataloader.dataset)
+    avg_bleu = total_bleu / num_batches
 
-    return epoch_loss, epoch_bleu
+    return epoch_loss, avg_bleu
 
 
 def train_one_epoch_ori(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
