@@ -28,7 +28,6 @@ from torch.cuda.amp import GradScaler, autocast
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 import torch
 import torch.nn.functional as F
-from torchtext.data.metrics import bleu_score
 
 
 def get_args_parser():
@@ -248,8 +247,12 @@ def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha
     # Label smoothing loss
     loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
 
+    # Tokenize hypotheses and references
+    tokenized_hypotheses = [hyp.split() for hyp in hypotheses]
+    tokenized_references = [[ref.split()] for ref in references]
+
     # Compute BLEU score
-    bleu = bleu_score(hypotheses, [references])
+    bleu = corpus_bleu(tokenized_references, tokenized_hypotheses, smoothing_function=SmoothingFunction().method4)
 
     # Combine losses
     total_loss = (1 - alpha) * loss - alpha * bleu
