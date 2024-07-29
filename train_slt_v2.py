@@ -26,6 +26,7 @@ import metrics
 import torch.nn.functional as F
 from rouge import Rouge
 from torch.cuda.amp import GradScaler, autocast
+from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 
 
 def get_args_parser():
@@ -207,14 +208,17 @@ def main(args_, config):
     print("Training completed. Evaluating on test set...")
     # test_loss, test_bleu, test_rouge, test_emo_accuracy = evaluate(slt_model, test_dataloader, criterion, device,
     #                                                                tokenizer)
-    (test_loss, test_bleu1,
-     test_bleu2, test_bleu3,
-     test_bleu4, test_rouge_l,
-     test_emo_accuracy) = evaluate(slt_model,
-                                   test_dataloader,
-                                   criterion,
-                                   device,
-                                   tokenizer)
+    try:
+        (test_loss, test_bleu1,
+         test_bleu2, test_bleu3,
+         test_bleu4, test_rouge_l,
+         test_emo_accuracy) = evaluate(slt_model,
+                                       test_dataloader,
+                                       criterion,
+                                       device,
+                                       tokenizer)
+    except Exception as e:
+        print(f"test 数据错误", e)
     print(
         f"Test Loss: {test_loss:.4f}, Test BLEU-4: {test_bleu4:.2f}, Test ROUGE-l: {test_rouge_l:.2f}, "
         f"Accuracy: {test_emo_accuracy:.2f}")
@@ -295,14 +299,20 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
     epoch_loss = running_loss / len(dataloader.dataset)
 
     # 计算 BLEU 和 ROUGE 分数
-    bleu = BLEU().corpus_score(hypotheses, [references])
+    # bleu = BLEU().corpus_score(hypotheses, [references])
+    # 计算 BLEU 分数
+    smoothing_function = SmoothingFunction().method4
+    bleu1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0), smoothing_function=smoothing_function)
+    bleu2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0), smoothing_function=smoothing_function)
+    bleu3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0), smoothing_function=smoothing_function)
+    bleu4 = corpus_bleu(references, hypotheses, weights=(0.25, 0.25, 0.25, 0.25), smoothing_function=smoothing_function)
     rouge = Rouge().get_scores(hypotheses, references, avg=True)
 
     # 解析 BLEU 和 ROUGE 分数
-    bleu1 = bleu.precisions[0]
-    bleu2 = bleu.precisions[1]
-    bleu3 = bleu.precisions[2]
-    bleu4 = bleu.precisions[3]
+    # bleu1 = bleu.precisions[0]
+    # bleu2 = bleu.precisions[1]
+    # bleu3 = bleu.precisions[2]
+    # bleu4 = bleu.precisions[3]
     rouge_l = rouge['rouge-l']['f']
 
     print(f"epoch_loss: {epoch_loss}")
