@@ -175,7 +175,7 @@ def main(args_, config):
     best_loss = float('inf')
     for epoch in range(args['epochs']):
         try:
-            train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler)
+            train_loss = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler, tokenizer)
             utils.log('slt_train', epoch=epoch + 1,
                       train_loss=train_loss
                       )
