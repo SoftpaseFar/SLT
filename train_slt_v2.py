@@ -251,7 +251,7 @@ def compute_bleu_score(hypotheses, references):
     return corpus_bleu([references], hypotheses)
 
 
-def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.5):
+def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.2):
     # Label smoothing loss
     loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
 
@@ -273,7 +273,9 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tok
     total_bleu = 0.0
     num_batches = len(dataloader)
 
-    for batch in dataloader:
+    for step, batch in enumerate(dataloader):
+        print('---step---: ', step)
+        # for batch in dataloader:
         try:
             optimizer.zero_grad()
             src_input, tgt_input = batch
