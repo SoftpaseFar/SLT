@@ -99,7 +99,7 @@ class TextDecoder(nn.Module):
     def __init__(self, config):
         super(TextDecoder, self).__init__()
         self.MBart = MBartForConditionalGeneration.from_pretrained(
-            "./data/pretrain_models/MBart_proun", local_files_only=True)
+            "facebook/mbart-large-cc25")
         self.txt_decoder = self.MBart.get_decoder()
 
         # 冻结解码器
