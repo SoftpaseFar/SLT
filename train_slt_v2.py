@@ -251,7 +251,7 @@ def compute_bleu_score(hypotheses, references):
     return corpus_bleu([references], hypotheses)
 
 
-def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0):
+def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.5):
     # Label smoothing loss
     loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
 

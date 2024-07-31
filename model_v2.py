@@ -136,8 +136,10 @@ class TextDecoder(nn.Module):
 
     # SLT阶段正向反馈
     def forward_slt(self, tgt_input, encoder_hidden_states, encoder_attention_mask):
-        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
-                                               self.txt_decoder.config.pad_token_id)
+        # decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
+        #                                        self.txt_decoder.config.pad_token_id)
+
+        decoder_input_ids = tgt_input['input_ids']
         # 维度映射
         encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
 
