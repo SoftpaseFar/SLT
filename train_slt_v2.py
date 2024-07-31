@@ -109,7 +109,7 @@ def main(args_, config):
 
     # 加载分词器
     # tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
-    tokenizer = MBartTokenizer.from_pretrained("./data/pretrain_models/MBart_trimmed", local_files_only=True)
+    tokenizer = MBartTokenizer.from_pretrained("./data/pretrain_models/MBart_proun", local_files_only=True)
     # lang = {
     #     'How2SignDataset': 'en_XX',
     #     'P14TDataset': 'de_DE',
