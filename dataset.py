@@ -284,7 +284,7 @@ class P14TDataset(Dataset):
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
             # 一个batch情感收集
-            emo_batch_tmp.append('positiv')
+            # emo_batch_tmp.append('positiv')
             tgt_batch.append(tgt_sample)
             if self.args['need_keypoints'] and other_data:
                 keypoints_sample = torch.tensor(other_data[0])
@@ -348,9 +348,9 @@ class P14TDataset(Dataset):
 
         print(f"正在加载数据集 {self.args['dataset']} ...")
 
-        # 情感pad初进行情感注入
-        for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
-            tgt_input['input_ids'][i, 0] = value
+        # # 情感pad初进行情感注入
+        # for i, value in enumerate(utils.tokenizer(emo_batch_tmp)):
+        #     tgt_input['input_ids'][i, 0] = value
 
         # 训练阶段需要mask掉一些，用来训练解码器
         if self.training_refurbish:
