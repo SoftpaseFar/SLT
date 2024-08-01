@@ -364,6 +364,8 @@ class P14TDataset(Dataset):
                                               truncation=True)
             return src_input, tgt_input, masked_tgt_input
 
+        print(src_input, tgt_input)
+
         # 返回一个batch视频集合 目标翻译的文本
         return src_input, tgt_input
 
