@@ -207,7 +207,7 @@ class P14TDataset(Dataset):
 
         # TODO 20->1000
         # print(self.data[0:20][0])
-        self.raw_data = [value for item in self.data[0:20] for _, value in item.items()]
+        self.raw_data = [value for item in self.data for _, value in item.items()]
         # print(self.raw_data[0])
 
     def __len__(self):
