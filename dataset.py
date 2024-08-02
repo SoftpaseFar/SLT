@@ -218,7 +218,9 @@ class P14TDataset(Dataset):
 
         name_sample = sample['name']
         imgs_path = sample['imgs_path']
+
         imgs_sample = self._load_imgs(imgs_path)
+
         # length_sample = sample['length']
         tgt_sample = sample['text']
 
@@ -258,7 +260,8 @@ class P14TDataset(Dataset):
                 frames.append(img)
 
             except IOError as e:
-                print(f"P14TDataset数据集，图片加载错误:", e)
+                print(f"P14TDataset数据集，图片不存在，忽略本图片:", e)
+                continue
 
         # 如果帧数超过最大长度，随机抽取max_length帧
         if len(frames) > self.max_length:
