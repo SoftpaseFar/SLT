@@ -283,6 +283,7 @@ class P14TDataset(Dataset):
             imgs_batch_tmp.append(imgs_sample)
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
+            print('tgt_sample', tgt_sample)
             # 一个batch情感收集
             # emo_batch_tmp.append('positiv')
             tgt_batch.append(tgt_sample)
