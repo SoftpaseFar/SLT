@@ -229,6 +229,7 @@ class P14TDataset(Dataset):
             keypoints_sample = self._load_keypoints(video_keypoints_path)
             return name_sample, imgs_sample, tgt_sample, keypoints_sample
 
+        print('imgs_sample: ', imgs_sample)
         return name_sample, imgs_sample, tgt_sample
 
     def _load_keypoints(self, path):
@@ -283,7 +284,7 @@ class P14TDataset(Dataset):
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
             # print('tgt_sample', tgt_sample)
-            print('imgs_batch_tmp: ', imgs_batch_tmp)
+            # print('imgs_batch_tmp.size: ', imgs_batch_tmp)
             # 一个batch情感收集
             # emo_batch_tmp.append('positiv')
             tgt_batch.append(tgt_sample)
