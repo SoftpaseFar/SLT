@@ -206,7 +206,7 @@ class P14TDataset(Dataset):
         self.max_length = config[args['dataset']]['max_length']
 
         # print(self.data[0:20][0])
-        self.raw_data = [value for item in self.data for _, value in item.items()]
+        self.raw_data = [value for item in self.data[186:] for _, value in item.items()]
         # print(self.raw_data[0])
 
     def __len__(self):
