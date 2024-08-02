@@ -252,10 +252,11 @@ class P14TDataset(Dataset):
         frames = []
         for path in imgs_path:
             try:
-                print('path: ', os.path.join(self.features_path, path))
+                # print('path: ', os.path.join(self.features_path, path))
 
                 img = cv2.imread(os.path.join(self.features_path, path))
                 frames.append(img)
+
             except IOError as e:
                 print(f"P14TDataset数据集，图片加载错误:", e)
 
