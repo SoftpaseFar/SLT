@@ -273,7 +273,12 @@ class P14TDataset(Dataset):
                                                     crop_size=self.args['input_size'], is_train=(self.phase == 'train'))
 
         for i, frame in enumerate(frames):
-            img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            # img = frame
+            try:
+                img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            except IOError as e:
+                print(f"，忽略本图片:", e)
+                continue
             img = utils.adjust_img(img, self.args['resize'])
             # img = img.resize(resize)
             img = img.crop(crop_rect)
