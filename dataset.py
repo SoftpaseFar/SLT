@@ -205,7 +205,6 @@ class P14TDataset(Dataset):
         self.features_path = config[args['dataset']]['features_path']
         self.max_length = config[args['dataset']]['max_length']
 
-        # TODO 20->1000
         # print(self.data[0:20][0])
         self.raw_data = [value for item in self.data for _, value in item.items()]
         # print(self.raw_data[0])
@@ -283,7 +282,8 @@ class P14TDataset(Dataset):
             imgs_batch_tmp.append(imgs_sample)
             # tgt_sample 加入情感占位符
             tgt_sample = '<pad>' + tgt_sample
-            print('tgt_sample', tgt_sample)
+            # print('tgt_sample', tgt_sample)
+            print('imgs_batch_tmp: ', imgs_batch_tmp)
             # 一个batch情感收集
             # emo_batch_tmp.append('positiv')
             tgt_batch.append(tgt_sample)
