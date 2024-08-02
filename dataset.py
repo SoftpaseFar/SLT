@@ -229,7 +229,7 @@ class P14TDataset(Dataset):
             keypoints_sample = self._load_keypoints(video_keypoints_path)
             return name_sample, imgs_sample, tgt_sample, keypoints_sample
 
-        print('imgs_sample: ', imgs_sample)
+        # print('imgs_sample: ', imgs_sample)
         return name_sample, imgs_sample, tgt_sample
 
     def _load_keypoints(self, path):
@@ -253,7 +253,7 @@ class P14TDataset(Dataset):
         for path in imgs_path:
             try:
                 print('path: ', os.path.join(self.features_path, path))
-                
+
                 img = cv2.imread(os.path.join(self.features_path, path))
                 frames.append(img)
             except IOError as e:

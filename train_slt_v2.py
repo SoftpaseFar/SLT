@@ -175,20 +175,20 @@ def main(args_, config):
     best_loss = float('inf')
     for epoch in range(args['epochs']):
         try:
-            train_loss, bleu_score = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler,
-                                                     tokenizer)
-
-            utils.log('slt_train', epoch=epoch + 1,
-                      train_loss=train_loss,
-                      bleu4=bleu_score
-                      )
+            # train_loss, bleu_score = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler,
+            #                                          tokenizer)
+            #
+            # utils.log('slt_train', epoch=epoch + 1,
+            #           train_loss=train_loss,
+            #           bleu4=bleu_score
+            #           )
 
             # val_loss, bleu, rouge, emo_accuracy = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
             val_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy = evaluate(slt_model, val_dataloader,
                                                                                    criterion, device, tokenizer)
 
-            print(
-                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU-4: {bleu4:.2f}, ROUGE-l: {rouge_l:.2f}, Accuracy: {emo_accuracy:.2f}")
+            # print(
+            # f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU-4: {bleu4:.2f}, ROUGE-l: {rouge_l:.2f}, Accuracy: {emo_accuracy:.2f}")
             utils.log('slt_val', epoch=epoch + 1,
                       val_loss=val_loss,
                       bleu1=bleu1,
