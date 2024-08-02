@@ -243,7 +243,7 @@ class P14TDataset(Dataset):
         return video_vectors
 
     def _load_imgs(self, imgs_path):
-        print('imgs_path: ', imgs_path)
+        # print('imgs_path: ', imgs_path)
         data_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
@@ -252,6 +252,8 @@ class P14TDataset(Dataset):
         frames = []
         for path in imgs_path:
             try:
+                print('path: ', os.path.join(self.features_path, path))
+                
                 img = cv2.imread(os.path.join(self.features_path, path))
                 frames.append(img)
             except IOError as e:
