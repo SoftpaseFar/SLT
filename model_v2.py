@@ -73,6 +73,9 @@ class ImageEncoder(nn.Module):
 
         self.args = args
 
+        # 自注意力层
+        self.self_attention = nn.MultiheadAttention(embed_dim=128, num_heads=8)
+
     def forward(self, src_input):
         imgs_ids = src_input['imgs_ids'].cuda()
         keypoints_ids = None
@@ -81,6 +84,11 @@ class ImageEncoder(nn.Module):
         # 原始视频特这个提取
         imgs_features = self.frames_emb(imgs_ids)
         imgs_hidden = self.frames_tem(imgs_features)
+
+        # 应用自注意力
+        imgs_hidden = imgs_hidden.permute(1, 0, 2)  # 需要调整维度顺序
+        imgs_hidden, _ = self.self_attention(imgs_hidden, imgs_hidden, imgs_hidden)
+        imgs_hidden = imgs_hidden.permute(1, 0, 2)
 
         # hidden = None
         if self.args['need_keypoints']:
