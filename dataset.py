@@ -257,8 +257,10 @@ class P14TDataset(Dataset):
                 # print('path: ', os.path.join(self.features_path, path))
 
                 img = cv2.imread(os.path.join(self.features_path, path))
-                frames.append(img)
-
+                if img is None:
+                    print("读取的图像为空，忽略这一帧:", path)
+                else:
+                    frames.append(img)
             except IOError as e:
                 print(f"P14TDataset数据集，图片不存在，忽略本图片:", e)
                 continue
