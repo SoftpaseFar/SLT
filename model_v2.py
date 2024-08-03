@@ -74,7 +74,7 @@ class ImageEncoder(nn.Module):
         self.args = args
 
         # 自注意力层
-        self.self_attention = nn.MultiheadAttention(embed_dim=128, num_heads=8)
+        self.self_attention = nn.MultiheadAttention(embed_dim=128, num_heads=1)
 
     def forward(self, src_input):
         imgs_ids = src_input['imgs_ids'].cuda()
