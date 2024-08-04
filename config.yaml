@@ -12,7 +12,7 @@ P14TDataset:
   train_label_path: ./data/Phonexi2014T/emo_train.pkl
   keypoints_dir: ./data/Phonexi2014T/keypoints/
   dev_label_path: ./data/Phonexi2014T/emo_dev.pkl
-  test_label_path: ./data/Phonexi2014T/emo_test.pkl
+  test_label_path: ./data/Phonexi2014T/emo_dev.pkl
   features_path: ./data/Phonexi2014T/features
   max_length: 300
 
