@@ -165,7 +165,7 @@ def main(args_, config):
     if args['finetune']:
         try:
             print("加载VLP模型权重...")
-            # 加载模型1的检查点
+            # 加载模型的检查点
             checkpoint = torch.load(config['model']['vlp_cps'])
 
             # 获取模型1的权重参数
