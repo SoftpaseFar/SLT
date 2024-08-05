@@ -3,7 +3,7 @@ import random
 
 
 class Brightness(object):
-    def __init__(self, min=1, max=1) -> None:
+    def __init__(self, min=1, max=1.5) -> None:  # 调整了 min 和 max 的范围
         self.min = min
         self.max = max
 
@@ -21,7 +21,7 @@ class Brightness(object):
 
 
 class Color(object):
-    def __init__(self, min=1, max=1) -> None:
+    def __init__(self, min=1, max=1.5) -> None:  # 调整了 min 和 max 的范围
         self.min = min
         self.max = max
 

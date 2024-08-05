@@ -9,6 +9,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from vidaug import augmentors as va
 from augmentation import *
+import numpy as np
 
 
 # How2Sign数据集
@@ -276,13 +277,12 @@ class P14TDataset(Dataset):
                 else:
                     # 应用数据增强（训练阶段）
                     if self.phase == 'train':
-                        # 将图像从 BGR 转换为 RGB 并转换为 PIL.Image
-                        img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                        img_pil = Image.fromarray(img)
                         img_pil = self.seq([img_pil])[0]  # 几何增强
                         img_pil = self.seq_color([img_pil])[0]  # 颜色增强
-                        frames.append(img_pil)
-                    else:
-                        frames.append(img)
+                        img = np.array(img_pil)
+                    frames.append(img)
 
             except IOError as e:
                 print(f"P14TDataset数据集，图片不存在，忽略本图片:", e)
