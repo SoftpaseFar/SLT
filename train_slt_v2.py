@@ -49,7 +49,7 @@ def get_args_parser():
     a_parser.add_argument('--log_dir', default='./log/')
     a_parser.add_argument('--input_size', default=224, type=int)
 
-    a_parser.add_argument('--training_refurbish', default=True, type=bool)
+    a_parser.add_argument('--training_refurbish', default=False, type=bool)
     a_parser.add_argument('--noise_rate', default=0.15, type=float)
     a_parser.add_argument('--random_shuffle', default=False, type=bool)
     a_parser.add_argument('--loss_lambda', type=float, default=0.1, metavar='RATE')
