@@ -274,15 +274,19 @@ class P14TDataset(Dataset):
                 if img is None:
                     print("读取的图像为空，忽略这一帧:", path)
                 else:
-                    frames.append(img)
+                    # 应用数据增强（训练阶段）
+                    if self.phase == 'train':
+                        # 将图像从 BGR 转换为 RGB 并转换为 PIL.Image
+                        img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                        img_pil = self.seq([img_pil])[0]  # 几何增强
+                        img_pil = self.seq_color([img_pil])[0]  # 颜色增强
+                        frames.append(img_pil)
+                    else:
+                        frames.append(img)
+
             except IOError as e:
                 print(f"P14TDataset数据集，图片不存在，忽略本图片:", e)
                 continue
-
-        # 数据增强：在获取图像帧后进行增强操作
-        if self.phase == 'train':  # 只在训练阶段进行数据增强
-            frames = self.seq(frames)  # 几何增强
-            frames = self.seq_color(frames)  # 颜色增强
 
         # 如果帧数超过最大长度，随机抽取max_length帧
         if len(frames) > self.max_length:
