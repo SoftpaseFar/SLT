@@ -28,6 +28,8 @@ from torch.cuda.amp import GradScaler, autocast
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 import torch
 import torch.nn.functional as F
+from torch.optim import lr_scheduler
+
 
 
 def get_args_parser():
@@ -58,11 +60,11 @@ def get_args_parser():
     a_parser.add_argument('--opt-betas', default=None, type=float, nargs='+', metavar='BETA')
     a_parser.add_argument('--clip-grad', type=float, default=None, metavar='NORM')
     a_parser.add_argument('--momentum', type=float, default=0.9, metavar='M')
-    a_parser.add_argument('--weight-decay', type=float, default=0.0)
+    a_parser.add_argument('--weight-decay', type=float, default=0.01)
 
     # * Learning rate 参数
     a_parser.add_argument('--sched', default='cosine', type=str, metavar='SCHEDULER')
-    a_parser.add_argument('--lr', type=float, default=1.0e-3, metavar='LR')
+    a_parser.add_argument('--lr', type=float, default=1.0e-4, metavar='LR')
     a_parser.add_argument('--lr-noise', type=float, nargs='+', default=None, metavar='pct, pct')
     a_parser.add_argument('--lr-noise-pct', type=float, default=0.67, metavar='PERCENT')
     a_parser.add_argument('--lr-noise-std', type=float, default=1.0, metavar='STDDEV')
