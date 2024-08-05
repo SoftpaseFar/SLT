@@ -7,6 +7,8 @@ import random
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+from vidaug import augmentors as va
+from augmentation import *
 
 
 # How2Sign数据集
@@ -208,6 +210,18 @@ class P14TDataset(Dataset):
         # print(self.data[0:20][0])
         self.raw_data = [value for item in self.data for _, value in item.items()]
         # print(self.raw_data[0])
+
+        # 数据增强
+        sometimes = lambda aug: va.Sometimes(0.5, aug)  # 以50%的概率应用增强
+        self.seq = va.Sequential([
+            sometimes(va.RandomRotate(30)),
+            sometimes(va.RandomResize(0.2)),
+            sometimes(va.RandomTranslate(x=10, y=10)),
+        ])
+        self.seq_color = va.Sequential([
+            sometimes(Brightness(min=0.1, max=1.5)),
+            sometimes(Color(min=0.1, max=1.5)),
+        ])
 
     def __len__(self):
         return len(self.raw_data)
