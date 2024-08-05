@@ -279,6 +279,11 @@ class P14TDataset(Dataset):
                 print(f"P14TDataset数据集，图片不存在，忽略本图片:", e)
                 continue
 
+        # 数据增强：在获取图像帧后进行增强操作
+        if self.phase == 'train':  # 只在训练阶段进行数据增强
+            frames = self.seq(frames)  # 几何增强
+            frames = self.seq_color(frames)  # 颜色增强
+
         # 如果帧数超过最大长度，随机抽取max_length帧
         if len(frames) > self.max_length:
             frames = [frames[i] for i in
