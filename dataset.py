@@ -276,7 +276,7 @@ class P14TDataset(Dataset):
                     print("读取的图像为空，忽略这一帧:", path)
                 else:
                     # 应用数据增强（训练阶段）
-                    if self.phase == 'train':
+                    if self.args['training_refurbish'] and self.phase == 'train':
                         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                         img_pil = Image.fromarray(img)
                         img_pil = self.seq([img_pil])[0]  # 几何增强
