@@ -214,13 +214,17 @@ class CLIP(nn.Module):
         super(CLIP, self).__init__()
         self.txt_encoder = TextEncoder()
         self.img_encoder = ImageEncoder(args)
+        self.txt_decoder = TextDecoder(config=config)
 
         # logit缩放比率，可学习参数
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
-    def forward(self, src_input, tgt_input):
+    def forward(self, src_input, tgt_input, masked_tgt_input):
         img_features, _ = self.img_encoder(src_input)
-        txt_features, encoder_hidden_states = self.txt_encoder(tgt_input)
+        txt_features, encoder_hidden_states = self.txt_encoder(tgt_input, masked_tgt_input)
+        vocab_logits = self.txt_decoder(phase='vlp', tgt_input=tgt_input,
+                                        encoder_hidden_states=encoder_hidden_states,
+                                        encoder_attention_mask=src_input['attention_mask'])
 
         # 特征信息归一化
         img_features = img_features / img_features.norm(dim=-1, keepdim=True)
@@ -237,7 +241,7 @@ class CLIP(nn.Module):
                                  dtype=img_txt_s_matrix.dtype,
                                  requires_grad=False)
 
-        return img_txt_s_matrix, txt_img_s_matrix, ground_truth, encoder_hidden_states
+        return img_txt_s_matrix, txt_img_s_matrix, ground_truth, vocab_logits
 
 
 # SLT模型

@@ -3,14 +3,12 @@ import math
 import sys
 import torch
 import yaml
-import random
-import loss
-import utils
 import argparse
-import numpy as np
 from pathlib import Path
-from transformers import MBartTokenizer
-from model import CLIP, TextDecoder
+from transformers import MBartTokenizer, AutoTokenizer
+import numpy as np
+import random
+from model_v2 import CLIP
 # How2SignDataset、P14TDataset、CSLDailyDataset有用 动态加载
 from dataset import How2SignDataset
 from dataset import P14TDataset
@@ -18,20 +16,25 @@ from dataset import CSLDailyDataset
 from torch.utils.data import DataLoader
 from torch.optim import lr_scheduler as scheduler
 from timm.optim import create_optimizer
-from timm.scheduler import create_scheduler
-from timm.optim import AdamW
 from timm.utils import NativeScaler
-from loss import KLLoss
 from definition import *
+import utils
+from sacrebleu.metrics import BLEU
 import multiprocessing
 from colorama import init, Back
+import metrics
+from rouge import Rouge
+from torch.cuda.amp import GradScaler, autocast
+from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+import torch
 import torch.nn.functional as F
+from torch.optim import lr_scheduler
 
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
-    a_parser.add_argument('--batch_size', default=2, type=int)
-    a_parser.add_argument('--epochs', default=1, type=int)
+    a_parser.add_argument('--batch_size', default=1, type=int)
+    a_parser.add_argument('--epochs', default=200, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -39,13 +42,13 @@ def get_args_parser():
     a_parser.add_argument('--resize', default=256, type=int)
     a_parser.add_argument('--seed', default=0, type=int)
     a_parser.add_argument('--pin_mem', action='store_true', default=True)
-    a_parser.add_argument('--num_workers', default=4, type=int)
+    a_parser.add_argument('--num_workers', default=1, type=int)
     # a_parser.add_argument('--num_workers', default=2, type=int)
     a_parser.add_argument('--checkpoints_dir', default='./checkpoints/')
     a_parser.add_argument('--log_dir', default='./log/')
     a_parser.add_argument('--input_size', default=224, type=int)
 
-    a_parser.add_argument('--training_refurbish', default=True, type=bool)
+    a_parser.add_argument('--training_refurbish', default=False, type=bool)
     a_parser.add_argument('--noise_rate', default=0.15, type=float)
     a_parser.add_argument('--random_shuffle', default=False, type=bool)
     a_parser.add_argument('--loss_lambda', type=float, default=0.1, metavar='RATE')
@@ -56,11 +59,11 @@ def get_args_parser():
     a_parser.add_argument('--opt-betas', default=None, type=float, nargs='+', metavar='BETA')
     a_parser.add_argument('--clip-grad', type=float, default=None, metavar='NORM')
     a_parser.add_argument('--momentum', type=float, default=0.9, metavar='M')
-    a_parser.add_argument('--weight-decay', type=float, default=0.0)
+    a_parser.add_argument('--weight-decay', type=float, default=0.01)
 
     # * Learning rate 参数
     a_parser.add_argument('--sched', default='cosine', type=str, metavar='SCHEDULER')
-    a_parser.add_argument('--lr', type=float, default=1.0e-3, metavar='LR')
+    a_parser.add_argument('--lr', type=float, default=1.0e-4, metavar='LR')
     a_parser.add_argument('--lr-noise', type=float, nargs='+', default=None, metavar='pct, pct')
     a_parser.add_argument('--lr-noise-pct', type=float, default=0.67, metavar='PERCENT')
     a_parser.add_argument('--lr-noise-std', type=float, default=1.0, metavar='STDDEV')
@@ -76,10 +79,16 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--need_keypoints', default=True, type=bool)
+    a_parser.add_argument('--finetune', default=True, type=bool)
 
-    a_parser.add_argument('--dataset', default='How2SignDataset', type=str,
+    a_parser.add_argument('--need_keypoints', default=False, type=bool)
+
+    a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
+
+    a_parser.add_argument('--dataset', default='P14TDataset', type=str,
                           choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
+    # a_parser.add_argument('--language', default='ch', type=str,
+    # choices=['en', 'de', 'ch'])
     return a_parser
 
 
@@ -88,6 +97,7 @@ def main(args_, config):
     args = vars(args_)
     # 获取设备
     device = torch.device(args['device'])
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("starting on...", device, sep=' ')
 
     # 设置随机种子
@@ -99,8 +109,8 @@ def main(args_, config):
     # cudnn.benchmark = False
 
     # 加载分词器
-    # tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
-    tokenizer = MBartTokenizer.from_pretrained("./data/pretrain_models/MBart_trimmed")
+    tokenizer = MBartTokenizer.from_pretrained("facebook/mbart-large-cc25")
+    # tokenizer = MBartTokenizer.from_pretrained("./data/pretrain_models/MBart_proun", local_files_only=True)
     # lang = {
     #     'How2SignDataset': 'en_XX',
     #     'P14TDataset': 'de_DE',
@@ -117,14 +127,7 @@ def main(args_, config):
                                        config=config,
                                        args=args,
                                        phase='train',
-                                       training_refurbish=True)
-
-    # # 测试代码
-    # print(train_data[0])
-    # return 666
-    #
-    # # 测试结束
-
+                                       training_refurbish=False)
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],
                                   num_workers=args['num_workers'],
@@ -138,8 +141,7 @@ def main(args_, config):
                                      config=config,
                                      args=args,
                                      phase='val',
-                                     training_refurbish=True)
-
+                                     training_refurbish=False)
     val_dataloader = DataLoader(val_data,
                                 batch_size=args['batch_size'],
                                 num_workers=args['num_workers'],
@@ -153,7 +155,7 @@ def main(args_, config):
                                       config=config,
                                       args=args,
                                       phase='test',
-                                      training_refurbish=True)
+                                      training_refurbish=False)
     test_dataloader = DataLoader(test_data,
                                  batch_size=args['batch_size'],
                                  num_workers=args['num_workers'],
@@ -161,307 +163,266 @@ def main(args_, config):
                                  pin_memory=args['pin_mem'],
                                  drop_last=True)
 
-    # CLIP Model
-    clip_model = CLIP(config=config, args=args)
-    clip_model.to(device)
-
-    # 优化器 学习率调度器
-    optimizer_clip = create_optimizer(args_, clip_model)
-    lr_scheduler_clip, _ = create_scheduler(args_, optimizer_clip)
-    clip_train_dict = dict(
-        optimizer=optimizer_clip,
-        lr_scheduler=lr_scheduler_clip,
-        clip_model=clip_model
-    )
-
-    # 解码器
-    txt_decoder = TextDecoder(config=config)
-    txt_decoder.to(device)
-    optimizer_td = AdamW(txt_decoder.parameters(), lr=1e-4, weight_decay=0, betas=(0.9, 0.98))
-    lr_scheduler_td = scheduler.CosineAnnealingLR(
-        optimizer=optimizer_td,
-        eta_min=1e-8,
-        T_max=args['epochs'],
-    )
-
-    td_train_dict = dict(
-        optimizer=optimizer_td,
-        lr_scheduler=lr_scheduler_td,
-        txt_decoder=txt_decoder
-    )
-
-    # 损失函数 缩放管理器
-    criterion = dict(
-        loss_clip=KLLoss(),
-        loss_vocab=torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX,
-                                             label_smoothing=0.2),
-        loss_emo=torch.nn.CrossEntropyLoss(label_smoothing=0.1)
-    )
-    loss_scaler = NativeScaler()
-
-    # 开始训练
-    print(f"开始训练，共训练{Back.GREEN} {args['epochs']} {Back.RESET}轮.")
-
-    # 初始化损失值和早停计数器
-    min_loss = np.inf
-    patience = args['patience']
-    patience_counter = 0
-
-    for epoch in range(args['epochs']):
-        # 在需要释放内存的地方调用
-        torch.cuda.empty_cache()
-
-        # 训练一个epoch
-        train_stats = train_one_epoch(args, epoch, train_dataloader,
-                                      clip_train_dict, td_train_dict,
-                                      criterion, loss_scaler)
-        train_loss = (train_stats['clip_loss'] + train_stats['tdm_loss']) / 2
-        print(
-            f"VLP阶段，在训练集上："
-            f"clip_loss={train_stats['clip_loss']}, tdm_loss={train_stats['tdm_loss']}, train_loss={train_loss}")
-        utils.log('vlp_train', epoch=epoch + 1,
-                  clip_loss=train_stats['clip_loss'],
-                  tdm_loss=train_stats['tdm_loss'],
-                  train_loss=train_loss)
-
-        # 清理CUDA缓存
-        utils.clear_cuda_cache()
-
-        # 评估一个epoch
-        val_stats = evaluate_one_epoch(args, epoch, val_dataloader,
-                                       clip_train_dict, td_train_dict,
-                                       criterion)
-        val_loss = (val_stats['clip_loss'] + val_stats['tdm_loss']) / 2
-        utils.log('vlp_val', epoch=epoch + 1,
-                  clip_loss=val_stats['clip_loss'],
-                  tdm_loss=val_stats['tdm_loss'],
-                  val_loss=val_loss)
-        print(
-            f"VLP阶段，在验证集上："
-            f"clip_loss={val_stats['clip_loss']}, tdm_loss={val_stats['tdm_loss']}, val_loss={val_loss}")
-
-        # 清理CUDA缓存
-        utils.clear_cuda_cache()
-
-        # 检查是否有新的最低验证损失
-        if val_loss < min_loss:
-            min_loss = val_loss
-            # 重置早停计数器
-            patience_counter = 0
-            print(f"最新val损失 {min_loss:.4f} 在第{epoch + 1}轮, 保存模型中... ")
-            # 保存最佳模型
-            if args['save_model'] and epoch % args['save_interval'] == 0:
-                utils.save_checkpoint(state={
-                    'epoch': epoch + 1,
-                    'clip_train_dict': dict(
-                        optimizer=clip_train_dict['optimizer'].state_dict(),
-                        lr_scheduler=clip_train_dict['lr_scheduler'].state_dict(),
-                        clip_model=clip_train_dict['clip_model'].state_dict()
-                    ),
-                    'td_train_dict': dict(
-                        optimizer=td_train_dict['optimizer'].state_dict(),
-                        lr_scheduler=td_train_dict['lr_scheduler'].state_dict(),
-                        txt_decoder=td_train_dict['txt_decoder'].state_dict()
-                    ),
-                    'train_stats': train_stats,
-                    'val_stats': val_stats,
-                    'best_loss': val_loss
-                }, args=args, filename=f"vlp_checkpoint.pth.tar")
-        else:
-            patience_counter += 1
-            print(f"在val损失上无提升，对于第{epoch + 1}轮. ")
-
-        # 检查是否达到早停条件
-        if patience_counter >= patience:
-            print(f"训练早停，patience：{patience}，第{epoch + 1}轮.")
-            break
-
-    # 测试集评估
-    print("在-测试数据集-查看效果，请稍等...")
-    # 评估一个epoch
-    test_stats = evaluate_one_epoch(args, epoch=-1,
-                                    dataloader=test_dataloader,
-                                    clip_train_dict=clip_train_dict,
-                                    td_train_dict=td_train_dict,
-                                    criterion=criterion)
-    test_loss = (test_stats['clip_loss'] + test_stats['tdm_loss']) / 2
-    print(
-        f"VLP阶段，在测试集上：clip_loss={test_stats['clip_loss']}, tdm_loss={test_stats['tdm_loss']}, test_loss={test_loss}")
-    utils.log('vlp_test',
-              clip_loss=test_stats['clip_loss'],
-              tdm_loss=test_stats['tdm_loss'],
-              test_loss=test_loss)
-
-
-def train_one_epoch(args, epoch, dataloader,
-                    clip_train_dict, td_train_dict,
-                    criterion, loss_scaler: NativeScaler()):
-    print(f"Epoch {epoch + 1} train...")
-
-    # 状态记录表
-    clip_losses, tdm_losses = [], []
-
-    # 开启训练模式
-    clip_train_dict['clip_model'].train(True)
-    td_train_dict['txt_decoder'].train(True)
-
-    clip_loss = criterion['loss_clip']
-    tdm_loss = criterion['loss_vocab']
-    emo_loss = criterion['loss_emo']
-
-    for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
+    # SLT Model
+    slt_model = CLIP(config=config, args=args)
+    # 权重加载
+    if args['finetune']:
         try:
-            print(f"Epoch {epoch + 1} train, Step {step + 1}...")
-
-            # 解码器损失权重分配
-            vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
-            emo_weight = 1 / len(tgt_input['input_ids'])
-            masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
-
-            # 刷新梯度
-            clip_train_dict['optimizer'].zero_grad()
-            # 采用自动混合精度
-            with torch.cuda.amp.autocast():
-                img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
-                                                                                                 tgt_input)
-                loss_i_t = clip_loss(img_txt_s_matrix, ground_truth)
-                loss_t_i = clip_loss(txt_img_s_matrix, ground_truth)
-                clip_total_loss = (loss_i_t + loss_t_i) / 2.
-            # 根据梯度模型参数
-            loss_scaler(clip_total_loss, clip_train_dict['optimizer'])
-            clip_losses.append(clip_total_loss.item())
-
-            # 5个step 更新解码器
-            if step % 5 == 0:
-                td_train_dict['optimizer'].zero_grad()
-                with torch.cuda.amp.autocast():
-                    tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
-                                                                          masked_tgt_input=masked_tgt_input,
-                                                                          txt_encoder=clip_train_dict[
-                                                                              'clip_model'].get_txt_encoder())
-                    loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-                    print('tdm_logits: ', tdm_logits.reshape(-1, tdm_logits.shape[-1]))
-                    print('tgt_input: ', tgt_input['input_ids'][:, 1:].cuda().reshape(-1))
-                    vocab_masked_lm_loss = tdm_loss(tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                    tgt_input['input_ids'][:, 1:].cuda().reshape(-1)) * loss_lambda
-
-                    # 将 logits 转换为概率分布
-                    # emo_logits = F.softmax(emo_logits, dim=-1)
-                    print('emo_logits: ', emo_logits)
-                    print('tgt_input[:, 0]: ', tgt_input['input_ids'][:, 0].cuda().reshape(-1))
-                    emo_masked_lm_loss = emo_loss(emo_logits, tgt_input['input_ids'][:, 0].cuda().reshape(-1)) * (
-                            loss_lambda ** 3)
-
-                    print(
-                        f"{Back.GREEN}"
-                        f"Training - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
-                        f"emo_masked_lm_loss: {emo_masked_lm_loss}"
-                        f"{Back.RESET}")
-
-                    masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
-                    masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
-                    # 根据梯度模型参数
-                    loss_scaler(masked_lm_loss, td_train_dict['optimizer'])
-                    tdm_losses.append(masked_lm_loss.item())
-
+            print("加载SLT模型权重...")
+            # 加载模型的检查点
+            checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
+            checkpoint = torch.load(checkpoint_path)
+            slt_model.load_state_dict(checkpoint)
+            print("模型权重加载成功")
         except Exception as e:
-            print(f"在训练过程中遇到错误，跳过此step样本。错误信息：{e}")
+            print("加载模型权重时出现错误:", e)
+
+    # 移动到设备上
+    slt_model.to(device)
+
+    optimizer = create_optimizer(args_, slt_model)
+    criterion = torch.nn.CrossEntropyLoss()
+    scaler = GradScaler()
+
+    lr_scheduler = scheduler.CosineAnnealingLR(optimizer, eta_min=args['min_lr'], T_max=args['epochs'])
+
+    best_loss = float('inf')
+    for epoch in range(args['epochs']):
+        torch.cuda.empty_cache()
+        try:
+            train_loss, bleu_score = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler,
+                                                     tokenizer)
+
+            utils.log('slt_train', epoch=epoch + 1,
+                      train_loss=train_loss,
+                      bleu4=bleu_score
+                      )
+
+            # val_loss, bleu, rouge, emo_accuracy = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
+            val_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy = evaluate(slt_model, val_dataloader,
+                                                                                   criterion, device, tokenizer)
+
+            print(
+                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU-4: {bleu4:.2f}, ROUGE-l: {rouge_l:.2f}, Accuracy: {emo_accuracy:.2f}")
+            utils.log('slt_val', epoch=epoch + 1,
+                      val_loss=val_loss,
+                      bleu1=bleu1,
+                      bleu2=bleu2,
+                      bleu3=bleu3,
+                      bleu4=bleu4,
+                      rouge_l=rouge_l,
+                      emo_acc=emo_accuracy
+                      )
+
+            lr_scheduler.step()
+
+            if val_loss < best_loss:
+                best_loss = val_loss
+                if args['save_model']:
+                    torch.save(slt_model.state_dict(), os.path.join(args['checkpoints_dir'], 'best_model.pth'))
+        except Exception as e:
+            print(f"Epoch {epoch + 1} 出现错误。", e)
             continue
 
-        # 梯度爆炸
-        if not math.isfinite(clip_total_loss.item()):
-            print("CLIP Loss: {}, 结束训练".format(clip_total_loss.item()))
-            sys.exit(1)
+    print("Training completed. Evaluating on test set...")
+    # test_loss, test_bleu, test_rouge, test_emo_accuracy = evaluate(slt_model, test_dataloader, criterion, device,
+    #                                                                tokenizer)
+    try:
+        (test_loss, test_bleu1,
+         test_bleu2, test_bleu3,
+         test_bleu4, test_rouge_l,
+         test_emo_accuracy) = evaluate(slt_model,
+                                       test_dataloader,
+                                       criterion,
+                                       device,
+                                       tokenizer)
+    except Exception as e:
+        print(f"test 数据错误", e)
+    print(
+        f"Test Loss: {test_loss:.4f}, Test BLEU-4: {test_bleu4:.2f}, Test ROUGE-l: {test_rouge_l:.2f}, "
+        f"Accuracy: {test_emo_accuracy:.2f}")
+    utils.log('slt_test',
+              test_loss=test_loss,
+              test_bleu1=test_bleu1,
+              test_bleu2=test_bleu2,
+              test_bleu3=test_bleu3,
+              test_bleu4=test_bleu4,
+              test_rouge_l=test_rouge_l,
+              test_emo_acc=test_emo_accuracy
+              )
 
-        # if not math.isfinite(masked_lm_loss.item()):
-        #     print("TDM Loss: {}, 结束训练".format(masked_lm_loss.item()))
-        #     sys.exit(1)
 
-    # 更新学习率
-    clip_train_dict['lr_scheduler'].step(epoch)
-    td_train_dict['lr_scheduler'].step()
-
-    avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
-
-    # 用于返回的状态字典
-    train_stats = {'clip_loss': avg_clip_loss,
-                   'tdm_loss': avg_tdm_loss}
-    return train_stats
+def label_smoothing_loss(pred, target, smoothing=0.1):
+    n_classes = pred.size(-1)
+    one_hot = torch.zeros_like(pred).scatter(1, target.unsqueeze(1), 1)
+    smoothed = one_hot * (1 - smoothing) + smoothing / n_classes
+    log_probs = F.log_softmax(pred, dim=-1)
+    loss = -(smoothed * log_probs).sum(dim=-1).mean()
+    return loss
 
 
-# 评估一个epoch
-def evaluate_one_epoch(args, epoch, dataloader,
-                       clip_train_dict, td_train_dict,
-                       criterion):
-    # -1 代表在测试数据集上
-    if epoch >= 0:
-        print(f"Epoch {epoch + 1} val...")
+def compute_bleu_score(hypotheses, references):
+    # BLEU score needs hypotheses and references as lists of strings
+    return corpus_bleu([references], hypotheses)
 
-    # 状态记录表
-    clip_losses, tdm_losses = [], []
-    # 设置模型为评估模式
-    clip_train_dict['clip_model'].eval()
-    td_train_dict['txt_decoder'].eval()
 
+def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.5):
+    # Label smoothing loss
+    loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
+
+    # Compute BLEU score
+    bleu_score = compute_bleu_score(hypotheses, references)
+
+    # Convert BLEU score to loss (higher BLEU score means lower loss)
+    bleu_loss = 1 - bleu_score
+
+    # Combine losses
+    total_loss = (1 - alpha) * loss + alpha * bleu_loss
+
+    return total_loss, bleu_score
+
+
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tokenizer, clip_grad_norm=1.0, alpha=0.5):
+    model.train()
+    running_loss = 0.0
+    total_bleu = 0.0
+    num_batches = len(dataloader)
+
+    for step, batch in enumerate(dataloader):
+        print('---step---: ', step)
+        # for batch in dataloader:
+        try:
+            optimizer.zero_grad()
+            src_input, tgt_input = batch
+
+            with autocast():
+                vocab_logits = model(src_input, tgt_input)
+                vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
+                tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
+
+                # Decode the hypotheses and references
+                hypotheses_batch = tokenizer.batch_decode(vocab_logits.argmax(dim=-1), skip_special_tokens=True)
+                references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
+
+                # Calculate custom loss
+                loss, bleu_score = custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses_batch, references_batch)
+                print('loss: ', loss.item())
+                print('BLEU: ', bleu_score)
+
+            scaler.scale(loss).backward()
+
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
+
+            scaler.step(optimizer)
+            scaler.update()
+
+            running_loss += loss.item() * src_input['imgs_ids'].size(0)
+            total_bleu += bleu_score
+
+        except Exception as e:
+            print("数据错误，摒弃本数据。", e)
+            continue
+
+    epoch_loss = running_loss / len(dataloader.dataset)
+    avg_bleu = total_bleu / num_batches
+
+    return epoch_loss, avg_bleu
+
+
+def train_one_epoch_ori(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
+    model.train()
+    running_loss = 0.0
+    for batch in dataloader:
+        try:
+            optimizer.zero_grad()
+            src_input, tgt_input = batch
+            with autocast():
+                vocab_logits = model(src_input, tgt_input)
+                vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
+                tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
+                loss = criterion(vocab_logits_flat, tgt_input_flat)
+                print('loss: ', loss)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            running_loss += loss.item() * src_input['imgs_ids'].size(0)
+        except Exception as e:
+            print("数据错误，摒弃本数据。", e)
+            continue
+    epoch_loss = running_loss / len(dataloader.dataset)
+    return epoch_loss
+
+
+def evaluate(model, dataloader, criterion, device, tokenizer):
+    model.eval()
+    running_loss = 0.0
+    references = []
+    hypotheses = []
+    emo_collection = []
     with torch.no_grad():
-        for step, (src_input, tgt_input, masked_tgt_input) in enumerate(dataloader):
+        for step, batch in enumerate(dataloader):
+            print('---step---: ', step)
             try:
-                # -1 代表在测试数据集上
-                if epoch >= 0:
-                    print('dev数据集上')
-                    print(f"Epoch {epoch + 1} val, Step {step + 1}...")
-                else:
-                    print('test数据集上')
-                    print(f"Step {step + 1}...")
+                src_input, tgt_input = batch
 
-                # 解码器损失权重分配
-                vocab_weight = (len(tgt_input['input_ids']) - 1) / len(tgt_input['input_ids']) - 1
-                emo_weight = 1 / len(tgt_input['input_ids'])
-                masked_lm_loss_weight = torch.tensor([vocab_weight, emo_weight], device=args['device'])
+                vocab_logits = model(src_input, tgt_input)
+                vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
+                tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
+                loss = criterion(vocab_logits_flat, tgt_input_flat)
 
-                # 采用自动混合精度
-                with torch.cuda.amp.autocast():
-                    # clip 部分
-                    img_txt_s_matrix, txt_img_s_matrix, ground_truth = clip_train_dict['clip_model'](src_input,
-                                                                                                     tgt_input)
+                running_loss += loss.item() * src_input['imgs_ids'].size(0)
 
-                    loss_i_t = criterion['loss_clip'](img_txt_s_matrix, ground_truth)
-                    loss_t_i = criterion['loss_clip'](txt_img_s_matrix, ground_truth)
-                    clip_total_loss = (loss_i_t + loss_t_i) / 2.
-                    clip_losses.append(clip_total_loss.item())
+                hypotheses_batch = tokenizer.batch_decode(vocab_logits.argmax(dim=-1), skip_special_tokens=True)
+                references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
 
-                    # mask 部分
-                    tdm_logits, emo_logits = td_train_dict['txt_decoder'](phase='clip', tgt_input=tgt_input,
-                                                                          masked_tgt_input=masked_tgt_input,
-                                                                          txt_encoder=clip_train_dict[
-                                                                              'clip_model'].get_txt_encoder())
-                    loss_lambda = torch.tensor(args['loss_lambda'], device=args['device'])
-                    vocab_masked_lm_loss = criterion['loss_vocab'](tdm_logits.reshape(-1, tdm_logits.shape[-1]),
-                                                                   tgt_input['input_ids'][:, 1:].cuda().reshape(
-                                                                       -1)) * loss_lambda
+                for hyp, ref in zip(hypotheses_batch, references_batch):
+                    if not hyp.strip():
+                        hyp = "neutral -<empty>-"
+                    print('hyp: ', hyp)
+                    print('ref: ', ref)
+                    emo_collection.append(utils.compare_first_words(hyp, ref))
+                    hyp = utils.remove_duplicates(hyp)
+                    ref = utils.remove_duplicates(ref)
+                    hypotheses.append(hyp)
+                    references.append(ref)
 
-                    emo_masked_lm_loss = criterion['loss_emo'](emo_logits,
-                                                               tgt_input['input_ids'][:, 0].cuda().reshape(
-                                                                   -1)) * (loss_lambda ** 3)
-
-                    print(
-                        f"{Back.GREEN}"
-                        f"Evaluation - Epoch: {epoch + 1}, vocab_masked_lm_loss: {vocab_masked_lm_loss}, "
-                        f"emo_masked_lm_loss: {emo_masked_lm_loss}"
-                        f"{Back.RESET}")
-
-                    masked_lm_loss = torch.stack([vocab_masked_lm_loss, emo_masked_lm_loss])
-                    masked_lm_loss = torch.mean(masked_lm_loss * masked_lm_loss_weight)
-
-                    tdm_losses.append(masked_lm_loss.item())
             except Exception as e:
-                print(f"在评估过程中遇到错误，跳过此step样本。错误信息：{e}")
+                print("数据错误，摒弃本数据。", e)
                 continue
+    # 情感准确率
+    emo_accuracy = utils.calculate_ratio_of_ones(emo_collection)
 
-    avg_clip_loss, avg_tdm_loss = loss.compute_average(clip_losses, tdm_losses)
+    # 计算 LOSS
+    epoch_loss = running_loss / len(dataloader.dataset)
 
-    eval_stats = {'clip_loss': avg_clip_loss, 'tdm_loss': avg_tdm_loss}
-    return eval_stats
+    # 计算 BLEU 和 ROUGE 分数
+    bleu = BLEU().corpus_score(hypotheses, [references])
+    # 计算 BLEU 分数
+
+    rouge = Rouge().get_scores(hypotheses, references, avg=True)
+    # smoothing_function = SmoothingFunction().method4
+    # bleu1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0), smoothing_function=smoothing_function)
+    # bleu2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0), smoothing_function=smoothing_function)
+    # bleu3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0), smoothing_function=smoothing_function)
+    # bleu4 = corpus_bleu(references, hypotheses, weights=(0.25, 0.25, 0.25, 0.25),
+    # smoothing_function=smoothing_function)
+
+    # 解析 BLEU 和 ROUGE 分数
+    bleu1 = bleu.precisions[0]
+    bleu2 = bleu.precisions[1]
+    bleu3 = bleu.precisions[2]
+    bleu4 = bleu.precisions[3]
+    rouge_l = rouge['rouge-l']['f']
+
+    print(f"epoch_loss: {epoch_loss}")
+    print(f"BLEU-1: {bleu1}")
+    print(f"BLEU-2: {bleu2}")
+    print(f"BLEU-3: {bleu3}")
+    print(f"BLEU-4: {bleu4}")
+    print(f"ROUGE-L: {rouge_l}")
+
+    return epoch_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy
 
 
 if __name__ == '__main__':

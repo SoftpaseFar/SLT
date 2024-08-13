@@ -325,6 +325,7 @@ if __name__ == '__main__':
     if input_path:
         sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
         input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+        print('input_paths:',input_paths)
 
     # video
     videos_dir = args.video
