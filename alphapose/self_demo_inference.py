@@ -37,6 +37,9 @@ parser.add_argument('--detfile', dest='detfile',
                     help='detection result file', default="")
 parser.add_argument('--indir', dest='inputpath',
                     help='image-directory', default="")
+
+parser.add_argument('--chdir', dest='checkpath',
+                    help='image-directory', default="")
 parser.add_argument('--list', dest='inputlist',
                     help='image-list', default="")
 parser.add_argument('--image', dest='inputimg',
@@ -315,6 +318,11 @@ def process(model, tracker, pose_dataset, detector):
             det_loader.clear_queues()
 
 
+def dir_is_exist(base_path, subdir):
+    dir_path = os.path.join(base_path, subdir)
+    return os.path.exists(dir_path) and os.path.isdir(dir_path)
+
+
 if __name__ == '__main__':
     model, tracker, pose_dataset, detector = load_model()
     output_path = args.outputpath
@@ -324,8 +332,17 @@ if __name__ == '__main__':
     input_paths = []
     if input_path:
         sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
-        input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
-        print('input_paths:',input_paths)
+
+        base_path = args.checkpath
+        if base_path:
+            input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs if
+                           not dir_is_exist(base_path, subdir)]
+            # print('1_input_paths: ', input_paths)
+        else:
+            input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+            # print('2_input_paths: ', input_paths)
+        # input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+        # print('input_paths:', input_paths)
 
     # video
     videos_dir = args.video

@@ -3,6 +3,7 @@ import torch.nn as nn
 from transformers import MBartForConditionalGeneration, MBartTokenizerFast
 import torch.nn.functional as F
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
+import os
 
 
 class MBart(nn.Module):
@@ -67,6 +68,11 @@ class MBart(nn.Module):
         print('forward: ', predicted_ids)
 
 
+def dir_is_exist(base_path, subdir):
+    dir_path = os.path.join(base_path, subdir)
+    return os.path.exists(dir_path) and os.path.isdir(dir_path)
+
+
 if __name__ == '__main__':
     # mbart = MBart()
     # # res = mbart.generate('I love you.', src_lang="en_XX", tgt_lang="es_XX")  # 设置目标语言为中文
@@ -75,5 +81,18 @@ if __name__ == '__main__':
     # mbart('我爱你。', src_lang="zh_CN", tgt_lang="zh_CN")  # 设置目标语言为中文
     # mbart('我爱你。', src_lang="en_XX", tgt_lang="zh_CN")  # 设置目标语言为中文
     # # print(f"Translated text: {res}")
-    loss_lambda = torch.tensor('0.1')
-    print(loss_lambda)
+    # loss_lambda = torch.tensor('0.1')
+    # print(loss_lambda)
+    input_path = '/Volumes/OneTouch/P14T/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test'
+    sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
+    print('sub_dirs: ', sub_dirs)
+    # base_path = '/Volumes/OneTouch/P14T/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test/'
+    base_path = ''
+
+    if base_path:
+        input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs if
+                       not dir_is_exist(base_path, subdir)]
+        print('1_input_paths: ', input_paths)
+    else:
+        input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+        print('2_input_paths: ', input_paths)
