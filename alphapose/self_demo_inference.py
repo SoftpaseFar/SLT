@@ -320,7 +320,10 @@ def process(model, tracker, pose_dataset, detector):
 
 def dir_is_exist(base_path, subdir):
     dir_path = os.path.join(base_path, subdir)
-    return os.path.exists(dir_path) and os.path.isdir(dir_path)
+    flag = os.path.exists(dir_path) and os.path.isdir(dir_path)
+    if flag:
+        print('内容已经存在，忽略：', input_paths)
+    return flag
 
 
 if __name__ == '__main__':
