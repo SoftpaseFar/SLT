@@ -11,7 +11,7 @@ How2SignDataset:
 P14TDataset:
   train_label_path: ./data/Phonexi2014T/emo_train.pkl
 #  keypoints_dir: ./data/Phonexi2014T/keypoints/
-  keypoints_dir: ~/autodl-tmp/
+  keypoints_dir: /root/autodl-tmp/
   dev_label_path: ./data/Phonexi2014T/emo_dev.pkl
   test_label_path: ./data/Phonexi2014T/emo_dev.pkl
   features_path: ./data/Phonexi2014T/features
