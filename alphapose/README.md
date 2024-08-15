@@ -43,6 +43,7 @@ pip install pytorch3d
 python scripts/self_demo_inference.py --cfg configs/halpe_136/resnet/self.yaml --checkpoint pretrained_models/self_model.pth --indir examples/demo/dev --save_img --format cmu
 python scripts/self_demo_inference.py --cfg configs/halpe_136/resnet/self.yaml --checkpoint pretrained_models/self_model.pth --indir examples/demo/dev  --format cmu
 python scripts/self_demo_inference.py --cfg configs/halpe_136/resnet/self.yaml --checkpoint pretrained_models/self_model.pth --indir ~/autodl-fs/SLT/data/Phonexi2014T/features/train/ --format cmu
+python scripts/self_demo_inference.py --cfg configs/halpe_136/resnet/self.yaml --checkpoint pretrained_models/self_model.pth --indir ~/autodl-fs/SLT/data/Phonexi2014T/features/train/ --chdir ./examples/train/  --format cmu
 
 ! 视频
 python scripts/demo_inference.py --cfg configs/halpe_26/resnet/256x192_res50_lr1e-3_1x.yaml --checkpoint pretrained_models/halpe26_fast_res50_256x192.pth --video examples/demo/test_video.mp4 --save_video

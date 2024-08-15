@@ -10,7 +10,8 @@ How2SignDataset:
 # PHOENIX-2014-T数据集参数
 P14TDataset:
   train_label_path: ./data/Phonexi2014T/emo_train.pkl
-  keypoints_dir: ./data/Phonexi2014T/keypoints/
+#  keypoints_dir: ./data/Phonexi2014T/keypoints/
+  keypoints_dir: ~/autodl-tmp/
   dev_label_path: ./data/Phonexi2014T/emo_dev.pkl
   test_label_path: ./data/Phonexi2014T/emo_dev.pkl
   features_path: ./data/Phonexi2014T/features
