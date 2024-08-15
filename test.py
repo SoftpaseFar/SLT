@@ -83,16 +83,24 @@ if __name__ == '__main__':
     # # print(f"Translated text: {res}")
     # loss_lambda = torch.tensor('0.1')
     # print(loss_lambda)
-    input_path = '/Volumes/OneTouch/P14T/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test'
-    sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
-    print('sub_dirs: ', sub_dirs)
-    # base_path = '/Volumes/OneTouch/P14T/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test/'
-    base_path = ''
+    # input_path = '/Volumes/OneTouch/P14T/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test'
+    # sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
+    # print('sub_dirs: ', sub_dirs)
+    base_path = '/Volumes/OneTouch/P14T/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test/'
+    # base_path = ''
+    res = os.listdir(base_path)
+    print(res)
+    #
+    # if base_path:
+    #     input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs if
+    #                    not dir_is_exist(base_path, subdir)]
+    #     print('1_input_paths: ', input_paths)
+    # else:
+    #     input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+    #     print('2_input_paths: ', input_paths)
 
-    if base_path:
-        input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs if
-                       not dir_is_exist(base_path, subdir)]
-        print('1_input_paths: ', input_paths)
-    else:
-        input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
-        print('2_input_paths: ', input_paths)
+    # text = """"""
+    #
+    # # 将文本按行分割，并计算行数
+    # line_count = len(text.splitlines())
+    # print("行数：", line_count)

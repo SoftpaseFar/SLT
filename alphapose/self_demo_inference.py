@@ -322,7 +322,7 @@ def dir_is_exist(base_path, subdir):
     dir_path = os.path.join(base_path, subdir)
     flag = os.path.exists(dir_path) and os.path.isdir(dir_path)
     if flag:
-        print('内容已经存在，忽略：', input_paths)
+        print('内容已经存在，忽略：', dir_path)
     return flag
 
 
@@ -334,16 +334,16 @@ if __name__ == '__main__':
     input_path = args.inputpath
     input_paths = []
     if input_path:
-        sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
-
         base_path = args.checkpath
         if base_path:
-            input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs if
-                           not dir_is_exist(base_path, subdir)]
-            # print('1_input_paths: ', input_paths)
+            sub_dirs = [d for d in os.listdir(input_path)
+                        if os.path.isdir(os.path.join(input_path, d)) and (not dir_is_exist(base_path, d))]
         else:
-            input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
-            # print('2_input_paths: ', input_paths)
+            sub_dirs = [d for d in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, d))]
+
+        input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
+        # print('1_input_paths: ', input_paths)
+        # print('2_input_paths: ', input_paths)
         # input_paths = [os.path.join(input_path, subdir) for subdir in sub_dirs]
         # print('input_paths:', input_paths)
 
