@@ -93,8 +93,12 @@ class ImageEncoder(nn.Module):
         # hidden = None
         if self.args['need_keypoints']:
             # 关键点信息提取
-            keypoints_hidden = self.keypoints_tem(keypoints_ids)
-            hidden = (imgs_hidden + keypoints_hidden) / 2
+            try:
+                keypoints_hidden = self.keypoints_tem(keypoints_ids)
+                hidden = (imgs_hidden + keypoints_hidden) / 2
+            except Exception as e:
+                print("imgs_hidden 和 keypoints_hidden维度不匹配")
+                hidden = imgs_hidden
         else:
             hidden = imgs_hidden
         head = hidden[:, -1, :]
