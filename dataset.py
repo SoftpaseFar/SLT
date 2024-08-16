@@ -243,7 +243,11 @@ class P14TDataset(Dataset):
         if self.args['need_keypoints']:
             video_keypoints_path = self.config[self.args['dataset']][
                                        'keypoints_dir'] + name_sample + '/alphapose-results.json'
-            keypoints_sample = self._load_keypoints(video_keypoints_path)
+            try:
+                keypoints_sample = self._load_keypoints(video_keypoints_path)
+            except Exception as e:
+                print("keypoints 读取错误，设置为默认值.")
+                keypoints_sample = [[], [], []]
             return name_sample, imgs_sample, tgt_sample, keypoints_sample
 
         # print('imgs_sample: ', imgs_sample)
