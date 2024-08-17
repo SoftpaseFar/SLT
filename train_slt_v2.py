@@ -33,9 +33,9 @@ from torch.optim import lr_scheduler
 
 
 def get_args_parser():
-    a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
+    a_parser = argparse.ArgumentParser('SLT scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=1, type=int)
-    a_parser.add_argument('--epochs', default=200, type=int)
+    a_parser.add_argument('--epochs', default=20, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -82,7 +82,7 @@ def get_args_parser():
 
     a_parser.add_argument('--finetune', default=True, type=bool)
 
-    a_parser.add_argument('--need_keypoints', default=True, type=bool)
+    a_parser.add_argument('--need_keypoints', default=False, type=bool)
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
 

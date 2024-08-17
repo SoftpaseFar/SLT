@@ -289,7 +289,7 @@ class P14TDataset(Dataset):
                     frames.append(img)
 
             except IOError as e:
-                print(f"P14TDataset数据集，图片不存在，忽略本图片:", e)
+                print(f"P14TDataset数据集，图片不存在，忽略本图片.")
                 continue
 
         # 如果帧数超过最大长度，随机抽取max_length帧
@@ -350,6 +350,7 @@ class P14TDataset(Dataset):
             for vid in imgs_batch_tmp]
 
         imgs_batch = torch.stack(imgs_batch, dim=0)
+        print("imgs_ids.shape", imgs_batch.shape)
 
         # 视频序列掩码
         img_padding_mask = torch.tensor(

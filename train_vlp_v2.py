@@ -29,12 +29,13 @@ from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 import torch
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
+from loss import KLLoss
 
 
 def get_args_parser():
     a_parser = argparse.ArgumentParser('VLP scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=1, type=int)
-    a_parser.add_argument('--epochs', default=200, type=int)
+    a_parser.add_argument('--epochs', default=20, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -81,7 +82,7 @@ def get_args_parser():
 
     a_parser.add_argument('--finetune', default=True, type=bool)
 
-    a_parser.add_argument('--need_keypoints', default=False, type=bool)
+    a_parser.add_argument('--need_keypoints', default=True, type=bool)
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
 
@@ -163,8 +164,8 @@ def main(args_, config):
                                  pin_memory=args['pin_mem'],
                                  drop_last=True)
 
-    # SLT Model
-    slt_model = CLIP(config=config, args=args)
+    # CLIP Model
+    vlp_model = CLIP(config=config, args=args)
     # 权重加载
     if args['finetune']:
         try:
@@ -172,16 +173,19 @@ def main(args_, config):
             # 加载模型的检查点
             checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
             checkpoint = torch.load(checkpoint_path)
-            slt_model.load_state_dict(checkpoint)
+            vlp_model.load_state_dict(checkpoint)
             print("模型权重加载成功")
         except Exception as e:
             print("加载模型权重时出现错误:", e)
 
     # 移动到设备上
-    slt_model.to(device)
+    vlp_model.to(device)
 
-    optimizer = create_optimizer(args_, slt_model)
-    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = create_optimizer(args_, vlp_model)
+
+    vocab_criterion = torch.nn.CrossEntropyLoss()
+    clip_criterion = KLLoss()
+    
     scaler = GradScaler()
 
     lr_scheduler = scheduler.CosineAnnealingLR(optimizer, eta_min=args['min_lr'], T_max=args['epochs'])
@@ -190,28 +194,18 @@ def main(args_, config):
     for epoch in range(args['epochs']):
         torch.cuda.empty_cache()
         try:
-            train_loss, bleu_score = train_one_epoch(slt_model, train_dataloader, optimizer, criterion, device, scaler,
-                                                     tokenizer)
-
-            utils.log('slt_train', epoch=epoch + 1,
-                      train_loss=train_loss,
-                      bleu4=bleu_score
+            train_loss = train_one_epoch(vlp_model, train_dataloader, optimizer, criterion, device, scaler)
+            utils.log('vlp_train', epoch=epoch + 1,
+                      train_loss=train_loss
                       )
 
-            # val_loss, bleu, rouge, emo_accuracy = evaluate(slt_model, val_dataloader, criterion, device, tokenizer)
-            val_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy = evaluate(slt_model, val_dataloader,
+            val_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy = evaluate(vlp_model, val_dataloader,
                                                                                    criterion, device, tokenizer)
 
             print(
                 f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU-4: {bleu4:.2f}, ROUGE-l: {rouge_l:.2f}, Accuracy: {emo_accuracy:.2f}")
-            utils.log('slt_val', epoch=epoch + 1,
+            utils.log('vlp_val', epoch=epoch + 1,
                       val_loss=val_loss,
-                      bleu1=bleu1,
-                      bleu2=bleu2,
-                      bleu3=bleu3,
-                      bleu4=bleu4,
-                      rouge_l=rouge_l,
-                      emo_acc=emo_accuracy
                       )
 
             lr_scheduler.step()
@@ -219,124 +213,20 @@ def main(args_, config):
             if val_loss < best_loss:
                 best_loss = val_loss
                 if args['save_model']:
-                    torch.save(slt_model.state_dict(), os.path.join(args['checkpoints_dir'], 'best_model.pth'))
+                    torch.save(vlp_model.state_dict(), os.path.join(args['checkpoints_dir'], 'vlp_best_model.pth'))
         except Exception as e:
             print(f"Epoch {epoch + 1} 出现错误。", e)
             continue
 
-    print("Training completed. Evaluating on test set...")
-    # test_loss, test_bleu, test_rouge, test_emo_accuracy = evaluate(slt_model, test_dataloader, criterion, device,
-    #                                                                tokenizer)
-    try:
-        (test_loss, test_bleu1,
-         test_bleu2, test_bleu3,
-         test_bleu4, test_rouge_l,
-         test_emo_accuracy) = evaluate(slt_model,
-                                       test_dataloader,
-                                       criterion,
-                                       device,
-                                       tokenizer)
-    except Exception as e:
-        print(f"test 数据错误", e)
-    print(
-        f"Test Loss: {test_loss:.4f}, Test BLEU-4: {test_bleu4:.2f}, Test ROUGE-l: {test_rouge_l:.2f}, "
-        f"Accuracy: {test_emo_accuracy:.2f}")
-    utils.log('slt_test',
-              test_loss=test_loss,
-              test_bleu1=test_bleu1,
-              test_bleu2=test_bleu2,
-              test_bleu3=test_bleu3,
-              test_bleu4=test_bleu4,
-              test_rouge_l=test_rouge_l,
-              test_emo_acc=test_emo_accuracy
-              )
 
-
-def label_smoothing_loss(pred, target, smoothing=0.1):
-    n_classes = pred.size(-1)
-    one_hot = torch.zeros_like(pred).scatter(1, target.unsqueeze(1), 1)
-    smoothed = one_hot * (1 - smoothing) + smoothing / n_classes
-    log_probs = F.log_softmax(pred, dim=-1)
-    loss = -(smoothed * log_probs).sum(dim=-1).mean()
-    return loss
-
-
-def compute_bleu_score(hypotheses, references):
-    # BLEU score needs hypotheses and references as lists of strings
-    return corpus_bleu([references], hypotheses)
-
-
-def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.5):
-    # Label smoothing loss
-    loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
-
-    # Compute BLEU score
-    bleu_score = compute_bleu_score(hypotheses, references)
-
-    # Convert BLEU score to loss (higher BLEU score means lower loss)
-    bleu_loss = 1 - bleu_score
-
-    # Combine losses
-    total_loss = (1 - alpha) * loss + alpha * bleu_loss
-
-    return total_loss, bleu_score
-
-
-def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tokenizer, clip_grad_norm=1.0, alpha=0.5):
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
     model.train()
     running_loss = 0.0
-    total_bleu = 0.0
-    num_batches = len(dataloader)
-
     for step, batch in enumerate(dataloader):
         print('---step---: ', step)
-        # for batch in dataloader:
         try:
             optimizer.zero_grad()
-            src_input, tgt_input = batch
-
-            with autocast():
-                vocab_logits = model(src_input, tgt_input)
-                vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
-                tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
-
-                # Decode the hypotheses and references
-                hypotheses_batch = tokenizer.batch_decode(vocab_logits.argmax(dim=-1), skip_special_tokens=True)
-                references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
-
-                # Calculate custom loss
-                loss, bleu_score = custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses_batch, references_batch)
-                print('loss: ', loss.item())
-                print('BLEU: ', bleu_score)
-
-            scaler.scale(loss).backward()
-
-            # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
-
-            scaler.step(optimizer)
-            scaler.update()
-
-            running_loss += loss.item() * src_input['imgs_ids'].size(0)
-            total_bleu += bleu_score
-
-        except Exception as e:
-            print("数据错误，摒弃本数据。", e)
-            continue
-
-    epoch_loss = running_loss / len(dataloader.dataset)
-    avg_bleu = total_bleu / num_batches
-
-    return epoch_loss, avg_bleu
-
-
-def train_one_epoch_ori(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
-    model.train()
-    running_loss = 0.0
-    for batch in dataloader:
-        try:
-            optimizer.zero_grad()
-            src_input, tgt_input = batch
+            src_input, tgt_input, masked_tgt_input = batch
             with autocast():
                 vocab_logits = model(src_input, tgt_input)
                 vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
