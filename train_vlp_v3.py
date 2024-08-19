@@ -174,8 +174,8 @@ def main(args_, config):
             print("加载SLT模型权重...")
             # 加载模型的检查点
             checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
-            checkpoint = torch.load(checkpoint_path, strict=False)
-            vlp_model.load_state_dict(checkpoint)
+            checkpoint = torch.load(checkpoint_path)
+            vlp_model.load_state_dict(checkpoint, strict=False)
 
             # 打印逻辑---开始
             matched_keys = []

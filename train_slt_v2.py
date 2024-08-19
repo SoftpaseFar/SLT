@@ -185,8 +185,8 @@ def main(args_, config):
             print("加载第一阶段权重...")
             # 加载模型的检查点
             checkpoint_path = os.path.join(args['checkpoints_dir'], 'vlp_best_model.pth')
-            checkpoint = torch.load(checkpoint_path, strict=False)
-            slt_model.load_state_dict(checkpoint)
+            checkpoint = torch.load(checkpoint_path)
+            slt_model.load_state_dict(checkpoint, strict=False)
             print("第一阶段权重加载成功")
         except Exception as e:
             print("加载第一阶段权重时出现错误:", e)
