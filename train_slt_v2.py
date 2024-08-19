@@ -166,17 +166,17 @@ def main(args_, config):
 
     # SLT Model
     slt_model = SLT(config=config, args=args)
-    # # 权重加载
-    # if args['finetune']:
-    #     try:
-    #         print("加载SLT模型权重...")
-    #         # 加载模型的检查点
-    #         checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
-    #         checkpoint = torch.load(checkpoint_path)
-    #         slt_model.load_state_dict(checkpoint)
-    #         print("模型权重加载成功")
-    #     except Exception as e:
-    #         print("加载模型权重时出现错误:", e)
+    # 权重加载
+    if args['finetune']:
+        try:
+            print("加载SLT模型权重...")
+            # 加载模型的检查点
+            checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
+            checkpoint = torch.load(checkpoint_path)
+            slt_model.load_state_dict(checkpoint)
+            print("模型权重加载成功")
+        except Exception as e:
+            print("加载模型权重时出现错误:", e)
 
     # 移动到设备上
     slt_model.to(device)
