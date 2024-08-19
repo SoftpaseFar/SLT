@@ -273,6 +273,7 @@ class CLIP(nn.Module):
                                  device=txt_img_s_matrix.device,
                                  dtype=img_txt_s_matrix.dtype,
                                  requires_grad=False)
+        print('ground_truth: ', ground_truth)
 
         return img_txt_s_matrix, txt_img_s_matrix, ground_truth, vocab_logits
 
