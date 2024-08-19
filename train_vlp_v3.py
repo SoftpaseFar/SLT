@@ -196,7 +196,7 @@ def main(args_, config):
                       train_loss=train_loss
                       )
 
-            val_loss = evaluate(vlp_model, val_dataloader, criterion, device, tokenizer)
+            val_loss = evaluate(vlp_model, val_dataloader, criterion, device)
 
             utils.log('vlp_val', epoch=epoch + 1,
                       val_loss=val_loss,
@@ -211,9 +211,14 @@ def main(args_, config):
         except Exception as e:
             print(f"Epoch {epoch + 1} 出现错误。", e)
             continue
+    test_loss = evaluate(vlp_model, test_dataloader, criterion, device)
+
+    utils.log('vlp_test',
+              test_loss=test_loss,
+              )
 
 
-def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
+def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler):
     model.train()
     running_loss = 0.0
 
