@@ -143,7 +143,7 @@ def main(args_, config):
                                      config=config,
                                      args=args,
                                      phase='val',
-                                     training_refurbish=False)
+                                     training_refurbish=True)
     val_dataloader = DataLoader(val_data,
                                 batch_size=args['batch_size'],
                                 num_workers=args['num_workers'],
@@ -157,7 +157,7 @@ def main(args_, config):
                                       config=config,
                                       args=args,
                                       phase='test',
-                                      training_refurbish=False)
+                                      training_refurbish=True)
     test_dataloader = DataLoader(test_data,
                                  batch_size=args['batch_size'],
                                  num_workers=args['num_workers'],
