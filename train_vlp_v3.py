@@ -83,6 +83,7 @@ def get_args_parser():
     a_parser.add_argument('--finetune', default=True, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
+    a_parser.add_argument('--kp_alpha', type=float, default=0.9, metavar='RATE')
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
 
@@ -195,8 +196,7 @@ def main(args_, config):
                       train_loss=train_loss
                       )
 
-            val_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy = evaluate(vlp_model, val_dataloader,
-                                                                                   criterion, device, tokenizer)
+            val_loss = evaluate(vlp_model, val_dataloader, criterion, device, tokenizer)
 
             print(
                 f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU-4: {bleu4:.2f}, ROUGE-l: {rouge_l:.2f}, Accuracy: {emo_accuracy:.2f}")
@@ -218,7 +218,7 @@ def main(args_, config):
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
     model.train()
     running_loss = 0.0
-    clip_losses, vocab_losses = [], []
+    clip_losses = []
     for step, batch in enumerate(dataloader):
         print('---step---: ', step)
         try:
