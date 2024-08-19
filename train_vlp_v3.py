@@ -230,7 +230,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
                 loss_i_t = criterion(img_txt_s_matrix, ground_truth)
                 loss_t_i = criterion(txt_img_s_matrix, ground_truth)
                 clip_loss = (loss_i_t + loss_t_i) / 2.
-                print('loss: ', clip_loss)
+                print('Train loss: ', clip_loss)
             scaler.scale(clip_loss).backward()
             scaler.step(optimizer)
             scaler.update()
@@ -242,75 +242,31 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: Nat
     return epoch_loss
 
 
-def evaluate(model, dataloader, criterion, device, tokenizer):
+def evaluate(model, dataloader, criterion, device):
     model.eval()
     running_loss = 0.0
-    references = []
-    hypotheses = []
-    emo_collection = []
+
     with torch.no_grad():
         for step, batch in enumerate(dataloader):
             print('---step---: ', step)
             try:
-                src_input, tgt_input = batch
+                src_input, tgt_input, masked_tgt_input = batch
+                with autocast():
+                    img_txt_s_matrix, txt_img_s_matrix, ground_truth, _ = model(src_input,
+                                                                                tgt_input,
+                                                                                masked_tgt_input)
 
-                vocab_logits = model(src_input, tgt_input)
-                vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
-                tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
-                loss = criterion(vocab_logits_flat, tgt_input_flat)
+                    loss_i_t = criterion(img_txt_s_matrix, ground_truth)
+                    loss_t_i = criterion(txt_img_s_matrix, ground_truth)
+                    clip_loss = (loss_i_t + loss_t_i) / 2.
+                    print('Val loss: ', clip_loss)
 
-                running_loss += loss.item() * src_input['imgs_ids'].size(0)
-
-                hypotheses_batch = tokenizer.batch_decode(vocab_logits.argmax(dim=-1), skip_special_tokens=True)
-                references_batch = tokenizer.batch_decode(tgt_input['input_ids'], skip_special_tokens=True)
-
-                for hyp, ref in zip(hypotheses_batch, references_batch):
-                    if not hyp.strip():
-                        hyp = "neutral -<empty>-"
-                    print('hyp: ', hyp)
-                    print('ref: ', ref)
-                    emo_collection.append(utils.compare_first_words(hyp, ref))
-                    hyp = utils.remove_duplicates(hyp)
-                    ref = utils.remove_duplicates(ref)
-                    hypotheses.append(hyp)
-                    references.append(ref)
-
+                running_loss += clip_loss.item() * src_input['imgs_ids'].size(0)
             except Exception as e:
                 print("数据错误，摒弃本数据。", e)
                 continue
-    # 情感准确率
-    emo_accuracy = utils.calculate_ratio_of_ones(emo_collection)
-
-    # 计算 LOSS
-    epoch_loss = running_loss / len(dataloader.dataset)
-
-    # 计算 BLEU 和 ROUGE 分数
-    bleu = BLEU().corpus_score(hypotheses, [references])
-    # 计算 BLEU 分数
-
-    rouge = Rouge().get_scores(hypotheses, references, avg=True)
-    # smoothing_function = SmoothingFunction().method4
-    # bleu1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0), smoothing_function=smoothing_function)
-    # bleu2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0), smoothing_function=smoothing_function)
-    # bleu3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0), smoothing_function=smoothing_function)
-    # bleu4 = corpus_bleu(references, hypotheses, weights=(0.25, 0.25, 0.25, 0.25),
-    # smoothing_function=smoothing_function)
-
-    # 解析 BLEU 和 ROUGE 分数
-    bleu1 = bleu.precisions[0]
-    bleu2 = bleu.precisions[1]
-    bleu3 = bleu.precisions[2]
-    bleu4 = bleu.precisions[3]
-    rouge_l = rouge['rouge-l']['f']
-
-    print(f"epoch_loss: {epoch_loss}")
-    print(f"BLEU-1: {bleu1}")
-    print(f"BLEU-2: {bleu2}")
-    print(f"BLEU-3: {bleu3}")
-    print(f"BLEU-4: {bleu4}")
-    print(f"ROUGE-L: {rouge_l}")
-
-    return epoch_loss, bleu1, bleu2, bleu3, bleu4, rouge_l, emo_accuracy
+        epoch_loss = running_loss / len(dataloader.dataset)
+        return epoch_loss
 
 
 if __name__ == '__main__':
