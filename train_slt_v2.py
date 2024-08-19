@@ -79,7 +79,8 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--finetune', default=True, type=bool)
+    a_parser.add_argument('--finetune', default=False, type=bool)
+    a_parser.add_argument('--succeed', default=True, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
     a_parser.add_argument('--kp_alpha', type=float, default=0.95, metavar='RATE')
@@ -177,6 +178,18 @@ def main(args_, config):
             print("模型权重加载成功")
         except Exception as e:
             print("加载模型权重时出现错误:", e)
+
+    # 阶段继承
+    if args['succeed']:
+        try:
+            print("加载第一阶段权重...")
+            # 加载模型的检查点
+            checkpoint_path = os.path.join(args['checkpoints_dir'], 'vlp_best_model.pth')
+            checkpoint = torch.load(checkpoint_path)
+            slt_model.load_state_dict(checkpoint)
+            print("第一阶段权重加载成功")
+        except Exception as e:
+            print("加载第一阶段权重时出现错误:", e)
 
     # 移动到设备上
     slt_model.to(device)
