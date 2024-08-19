@@ -176,6 +176,25 @@ def main(args_, config):
             checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
             checkpoint = torch.load(checkpoint_path, strict=False)
             vlp_model.load_state_dict(checkpoint)
+
+            # 打印逻辑---开始
+            matched_keys = []
+            unmatched_keys = []
+            # 检查每个键是否匹配
+            for key in checkpoint.keys():
+                if key in vlp_model and vlp_model[key].shape == checkpoint[key].shape:
+                    matched_keys.append(key)
+                else:
+                    unmatched_keys.append(key)
+            # 打印匹配和未匹配的键
+            print("Matched keys:")
+            for key in matched_keys:
+                print(key)
+            print("\nUnmatched keys:")
+            for key in unmatched_keys:
+                print(key)
+            # 打印逻辑---结束
+
             print("模型权重加载成功")
         except Exception as e:
             print("加载模型权重时出现错误:", e)
