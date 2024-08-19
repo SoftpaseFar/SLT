@@ -8,7 +8,7 @@ from pathlib import Path
 from transformers import MBartTokenizer, AutoTokenizer
 import numpy as np
 import random
-from model_v2 import CLIP
+from model_v3 import CLIP
 # How2SignDataset、P14TDataset、CSLDailyDataset有用 动态加载
 from dataset import How2SignDataset
 from dataset import P14TDataset
@@ -82,7 +82,7 @@ def get_args_parser():
 
     a_parser.add_argument('--finetune', default=True, type=bool)
 
-    a_parser.add_argument('--need_keypoints', default=True, type=bool)
+    a_parser.add_argument('--need_keypoints', default=False, type=bool)
     a_parser.add_argument('--kp_alpha', type=float, default=0.9, metavar='RATE')
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
@@ -198,8 +198,6 @@ def main(args_, config):
 
             val_loss = evaluate(vlp_model, val_dataloader, criterion, device, tokenizer)
 
-            print(
-                f"Epoch [{epoch + 1}/{args['epochs']}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, BLEU-4: {bleu4:.2f}, ROUGE-l: {rouge_l:.2f}, Accuracy: {emo_accuracy:.2f}")
             utils.log('vlp_val', epoch=epoch + 1,
                       val_loss=val_loss,
                       )
@@ -218,22 +216,25 @@ def main(args_, config):
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
     model.train()
     running_loss = 0.0
-    clip_losses = []
+
     for step, batch in enumerate(dataloader):
         print('---step---: ', step)
         try:
             optimizer.zero_grad()
             src_input, tgt_input, masked_tgt_input = batch
             with autocast():
-                vocab_logits = model(src_input, tgt_input)
-                vocab_logits_flat = vocab_logits.view(-1, vocab_logits.size(-1)).to(device)
-                tgt_input_flat = tgt_input['input_ids'][:, 1:].contiguous().view(-1).to(device)
-                loss = criterion(vocab_logits_flat, tgt_input_flat)
-                print('loss: ', loss)
-            scaler.scale(loss).backward()
+                img_txt_s_matrix, txt_img_s_matrix, ground_truth, _ = model(src_input,
+                                                                            tgt_input,
+                                                                            masked_tgt_input)
+
+                loss_i_t = criterion(img_txt_s_matrix, ground_truth)
+                loss_t_i = criterion(txt_img_s_matrix, ground_truth)
+                clip_loss = (loss_i_t + loss_t_i) / 2.
+                print('loss: ', clip_loss)
+            scaler.scale(clip_loss).backward()
             scaler.step(optimizer)
             scaler.update()
-            running_loss += loss.item() * src_input['imgs_ids'].size(0)
+            running_loss += clip_loss.item() * src_input['imgs_ids'].size(0)
         except Exception as e:
             print("数据错误，摒弃本数据。", e)
             continue
