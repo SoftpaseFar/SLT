@@ -129,7 +129,7 @@ def main(args_, config):
                                        config=config,
                                        args=args,
                                        phase='train',
-                                       training_refurbish=False)
+                                       training_refurbish=True)
     train_dataloader = DataLoader(train_data,
                                   batch_size=args['batch_size'],
                                   num_workers=args['num_workers'],
