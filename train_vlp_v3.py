@@ -80,7 +80,8 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--finetune', default=True, type=bool)
+    a_parser.add_argument('--finetune', default=False, type=bool)
+    a_parser.add_argument('--succeed', default=True, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=False, type=bool)
     a_parser.add_argument('--kp_alpha', type=float, default=0.9, metavar='RATE')
@@ -167,17 +168,17 @@ def main(args_, config):
 
     # CLIP Model
     vlp_model = CLIP(config=config, args=args)
-    # # 权重加载
-    # if args['finetune']:
-    #     try:
-    #         print("加载SLT模型权重...")
-    #         # 加载模型的检查点
-    #         checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
-    #         checkpoint = torch.load(checkpoint_path)
-    #         vlp_model.load_state_dict(checkpoint)
-    #         print("模型权重加载成功")
-    #     except Exception as e:
-    #         print("加载模型权重时出现错误:", e)
+    # 权重加载
+    if args['succeed']:
+        try:
+            print("加载SLT模型权重...")
+            # 加载模型的检查点
+            checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
+            checkpoint = torch.load(checkpoint_path, strict=False)
+            vlp_model.load_state_dict(checkpoint)
+            print("模型权重加载成功")
+        except Exception as e:
+            print("加载模型权重时出现错误:", e)
 
     # 移动到设备上
     vlp_model.to(device)
