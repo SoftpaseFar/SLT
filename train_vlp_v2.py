@@ -183,9 +183,11 @@ def main(args_, config):
 
     optimizer = create_optimizer(args_, vlp_model)
 
-    vocab_criterion = torch.nn.CrossEntropyLoss()
-    clip_criterion = KLLoss()
-    
+    criterion = dict(
+        vocab_criterion=torch.nn.CrossEntropyLoss(),
+        clip_criterion=KLLoss()
+    )
+
     scaler = GradScaler()
 
     lr_scheduler = scheduler.CosineAnnealingLR(optimizer, eta_min=args['min_lr'], T_max=args['epochs'])
@@ -222,6 +224,7 @@ def main(args_, config):
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler: NativeScaler):
     model.train()
     running_loss = 0.0
+    clip_losses, vocab_losses = [], []
     for step, batch in enumerate(dataloader):
         print('---step---: ', step)
         try:
