@@ -90,17 +90,60 @@ class ImageEncoder(nn.Module):
         imgs_hidden, _ = self.self_attention(imgs_hidden, imgs_hidden, imgs_hidden)
         imgs_hidden = imgs_hidden.permute(1, 0, 2)
 
+        # # hidden = None
+        # if self.args['need_keypoints']:
+        #     # 关键点信息提取
+        #     try:
+        #         keypoints_hidden = self.keypoints_tem(keypoints_ids)
+        #         hidden = (imgs_hidden + keypoints_hidden) / 2
+        #     except Exception as e:
+        #         print("imgs_hidden 和 keypoints_hidden维度不匹配")
+        #         hidden = imgs_hidden
+        # else:
+        #     hidden = imgs_hidden
+
+        # 初始化 hidden 为 None
         # hidden = None
+        # 定义融合比例
+        alpha = self.args['kp_alpha']  # 默认为0.5，可以根据需要调整
+
+        # 如果需要使用关键点信息
         if self.args['need_keypoints']:
-            # 关键点信息提取
             try:
+                # 提取关键点信息
                 keypoints_hidden = self.keypoints_tem(keypoints_ids)
-                hidden = (imgs_hidden + keypoints_hidden) / 2
+
+                # 检查维度匹配情况
+                if keypoints_hidden.size() == imgs_hidden.size():
+                    # 维度完全匹配，按比例融合
+                    hidden = alpha * imgs_hidden + (1 - alpha) * keypoints_hidden
+                else:
+                    # 维度不完全匹配，进行逐层处理
+                    print("imgs_hidden 和 keypoints_hidden 部分维度不匹配，尝试逐层处理")
+
+                    # 获取匹配的最小维度
+                    min_dim = min(keypoints_hidden.size(-1), imgs_hidden.size(-1))
+
+                    # 对匹配的维度部分按比例融合
+                    fused_hidden = alpha * imgs_hidden[..., :min_dim] + (1 - alpha) * keypoints_hidden[..., :min_dim]
+
+                    # 如果某一方有多余的维度，直接拼接到融合结果后面
+                    if keypoints_hidden.size(-1) > min_dim:
+                        fused_hidden = torch.cat((fused_hidden, keypoints_hidden[..., min_dim:]), dim=-1)
+                    if imgs_hidden.size(-1) > min_dim:
+                        fused_hidden = torch.cat((fused_hidden, imgs_hidden[..., min_dim:]), dim=-1)
+
+                    # 最终的隐藏层
+                    hidden = fused_hidden
+
             except Exception as e:
-                print("imgs_hidden 和 keypoints_hidden维度不匹配")
+                # 如果出现异常，则仅使用 imgs_hidden
+                print("融合关键点信息时出现异常，使用 imgs_hidden:", e)
                 hidden = imgs_hidden
         else:
+            # 如果不需要关键点信息，则直接使用 imgs_hidden
             hidden = imgs_hidden
+
         head = hidden[:, -1, :]
         logits = hidden
         return head, logits

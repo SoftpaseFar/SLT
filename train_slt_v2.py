@@ -31,7 +31,6 @@ import torch.nn.functional as F
 from torch.optim import lr_scheduler
 
 
-
 def get_args_parser():
     a_parser = argparse.ArgumentParser('SLT scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=1, type=int)
@@ -83,6 +82,7 @@ def get_args_parser():
     a_parser.add_argument('--finetune', default=True, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=True, type=bool)
+    a_parser.add_argument('--kp_alpha', type=float, default=0.9, metavar='RATE')
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
 
