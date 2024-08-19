@@ -180,12 +180,15 @@ def main(args_, config):
             # 打印逻辑---开始
             matched_keys = []
             unmatched_keys = []
+            state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
+
             # 检查每个键是否匹配
-            for key in checkpoint.keys():
-                if key in vlp_model and vlp_model[key].shape == checkpoint[key].shape:
+            for key in state_dict.keys():  # 使用 state_dict 而不是 checkpoint 直接迭代
+                if key in vlp_model.state_dict() and vlp_model.state_dict()[key].shape == state_dict[key].shape:
                     matched_keys.append(key)
                 else:
                     unmatched_keys.append(key)
+
             # 打印匹配和未匹配的键
             print("Matched keys:")
             for key in matched_keys:
