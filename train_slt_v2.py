@@ -29,6 +29,7 @@ from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 import torch
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 
 def get_args_parser():
@@ -285,7 +286,8 @@ def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha
     loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
 
     # Compute BLEU score
-    bleu_score = compute_bleu_score(hypotheses, references)
+    # bleu_score = compute_bleu_score(hypotheses, references)
+    bleu_score = compute_bleu2_score(hypotheses, references)
 
     # Convert BLEU score to loss (higher BLEU score means lower loss)
     bleu_loss = 1 - bleu_score
@@ -294,6 +296,20 @@ def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha
     total_loss = (1 - alpha) * loss + alpha * bleu_loss
 
     return total_loss, bleu_score
+
+
+def compute_bleu2_score(hypotheses, references):
+    chencherry = SmoothingFunction()
+    bleu2_scores = []
+
+    for hyp, ref in zip(hypotheses, references):
+        # Only calculate BLEU2 score (using n-grams up to 2)
+        bleu2_score = sentence_bleu([ref.split()], hyp.split(), weights=(0, 1, 0, 0),
+                                    smoothing_function=chencherry.method1)
+        bleu2_scores.append(bleu2_score)
+
+    # Return the average BLEU2 score for the batch
+    return sum(bleu2_scores) / len(bleu2_scores)
 
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device, scaler, tokenizer, clip_grad_norm=1.0, alpha=0.5):
