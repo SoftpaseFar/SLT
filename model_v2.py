@@ -9,7 +9,13 @@ from transformers.models.mbart.modeling_mbart import shift_tokens_right
 class ProjectionLayer(nn.Module):
     def __init__(self, input_dim=128, output_dim=1024):
         super(ProjectionLayer, self).__init__()
-        self.projection = nn.Linear(input_dim, output_dim)
+        # self.projection = nn.Linear(input_dim, output_dim)
+        self.projection = nn.Sequential(
+            nn.Linear(input_dim, 512),
+            nn.ReLU(),  # 非线性激活
+            nn.Linear(512, output_dim),
+            nn.ReLU()  # 非线性激活
+        )
 
     def forward(self, x):
         projected_x = self.projection(x)
