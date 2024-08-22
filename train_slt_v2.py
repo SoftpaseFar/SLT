@@ -293,7 +293,7 @@ def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha
     bleu_loss = 1 - bleu_score
 
     # Combine losses
-    total_loss = (1 - alpha) * loss + alpha * bleu_loss * 5
+    total_loss = (1 - alpha) * loss + alpha * bleu_loss
 
     return total_loss, bleu_score
 
