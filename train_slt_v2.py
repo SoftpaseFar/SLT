@@ -281,21 +281,41 @@ def compute_bleu_score(hypotheses, references):
     return corpus_bleu([references], hypotheses)
 
 
+# def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.6):
+#     # Label smoothing loss
+#     loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
+#
+#     # Compute BLEU score
+#     # bleu_score = compute_bleu_score(hypotheses, references)
+#     bleu_score = compute_bleu2_score(hypotheses, references)
+#
+#     # Convert BLEU score to loss (higher BLEU score means lower loss)
+#     bleu_loss = 1 - bleu_score
+#
+#     # Combine losses
+#     total_loss = (1 - alpha) * loss + alpha * bleu_loss
+#
+#     return total_loss, bleu_score
+
+
 def custom_loss(vocab_logits_flat, tgt_input_flat, hypotheses, references, alpha=0.6):
     # Label smoothing loss
-    loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
+    smoothing_loss = label_smoothing_loss(vocab_logits_flat, tgt_input_flat)
 
-    # Compute BLEU score
-    # bleu_score = compute_bleu_score(hypotheses, references)
-    bleu_score = compute_bleu2_score(hypotheses, references)
+    # Compute BLEU2 score
+    bleu2_score = compute_bleu2_score(hypotheses, references)
 
-    # Convert BLEU score to loss (higher BLEU score means lower loss)
-    bleu_loss = 1 - bleu_score
+    # Normalize smoothing_loss and bleu2_score
+    norm_smoothing_loss = (smoothing_loss - smoothing_loss.min()) / (smoothing_loss.max() - smoothing_loss.min())
+    norm_bleu2_score = (bleu2_score - bleu2_score.min()) / (bleu2_score.max() - bleu2_score.min())
+
+    # Convert BLEU2 score to loss (higher BLEU2 score means lower loss)
+    bleu2_loss = 1 - norm_bleu2_score
 
     # Combine losses
-    total_loss = (1 - alpha) * loss + alpha * bleu_loss
+    total_loss = (1 - alpha) * norm_smoothing_loss + alpha * bleu2_loss
 
-    return total_loss, bleu_score
+    return total_loss, bleu2_score
 
 
 def compute_bleu2_score(hypotheses, references):
