@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from transformers import MBartForConditionalGeneration
 from transformers.models.mbart.modeling_mbart import shift_tokens_right
+import random
 
 
 # 投影层
@@ -183,8 +184,9 @@ class TextDecoder(nn.Module):
 
     # SLT阶段正向反馈
     def forward_slt(self, tgt_input, encoder_hidden_states, encoder_attention_mask):
-        decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
-                                               self.txt_decoder.config.pad_token_id)
+        if random.random() < 0.5:
+            decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
+                                                   self.txt_decoder.config.pad_token_id)
 
         # 维度映射
         encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
