@@ -11,9 +11,9 @@ class ProjectionLayer(nn.Module):
         super(ProjectionLayer, self).__init__()
         # self.projection = nn.Linear(input_dim, output_dim)
         self.projection = nn.Sequential(
-            nn.ReLU(),  # 非线性激活
-            nn.Linear(input_dim, output_dim),
-            # nn.Linear(512, output_dim),
+            # nn.ReLU(),  # 非线性激活
+            nn.Linear(input_dim, 512),
+            nn.Linear(512, output_dim),
             # nn.ReLU()  # 非线性激活
         )
 
