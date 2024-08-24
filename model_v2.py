@@ -187,6 +187,8 @@ class TextDecoder(nn.Module):
         if random.random() < 0.5:
             decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
                                                    self.txt_decoder.config.pad_token_id)
+        else:
+            decoder_input_ids = tgt_input['input_ids']
 
         # 维度映射
         encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
