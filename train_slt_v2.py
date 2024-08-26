@@ -35,7 +35,7 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 def get_args_parser():
     a_parser = argparse.ArgumentParser('SLT scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=1, type=int)
-    a_parser.add_argument('--epochs', default=20, type=int)
+    a_parser.add_argument('--epochs', default=10, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -80,7 +80,7 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--finetune', default=False, type=bool)
+    a_parser.add_argument('--finetune', default=True, type=bool)
     a_parser.add_argument('--succeed', default=True, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=False, type=bool)
