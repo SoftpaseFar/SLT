@@ -80,7 +80,7 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--finetune', default=False, type=bool)
+    a_parser.add_argument('--finetune', default=True, type=bool)
     a_parser.add_argument('--succeed', default=False, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=False, type=bool)
@@ -173,7 +173,7 @@ def main(args_, config):
         try:
             print("加载SLT模型权重...")
             # 加载模型的检查点
-            checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
+            checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model_46_pths')
             checkpoint = torch.load(checkpoint_path)
             slt_model.load_state_dict(checkpoint)
             print("模型权重加载成功")
