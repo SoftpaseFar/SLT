@@ -173,7 +173,7 @@ def main(args_, config):
         try:
             print("加载SLT模型权重...")
             # 加载模型的检查点
-            checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model_46_pth')
+            checkpoint_path = os.path.join(args['checkpoints_dir'], 'best_model.pth')
             checkpoint = torch.load(checkpoint_path)
             slt_model.load_state_dict(checkpoint)
             print("模型权重加载成功")
