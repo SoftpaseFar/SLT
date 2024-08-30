@@ -80,15 +80,15 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--finetune', default=True, type=bool)
+    a_parser.add_argument('--finetune', default=False, type=bool)
     a_parser.add_argument('--succeed', default=False, type=bool)
 
-    a_parser.add_argument('--need_keypoints', default=True, type=bool)
+    a_parser.add_argument('--need_keypoints', default=False, type=bool)
     a_parser.add_argument('--kp_alpha', type=float, default=0.95, metavar='RATE')
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
 
-    a_parser.add_argument('--dataset', default='P14TDataset', type=str,
+    a_parser.add_argument('--dataset', default='How2SignDataset', type=str,
                           choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
     # a_parser.add_argument('--language', default='ch', type=str,
     # choices=['en', 'de', 'ch'])
