@@ -1,7 +1,8 @@
 # How2Sign数据集参数
 How2SignDataset:
-  videos_dir: ./data/How2Sign/videos/
-  keypoints_dir: ./data/How2Sign/keypoints/
+#  videos_dir: ./data/How2Sign/videos/
+  videos_dir: /root/autodl-tmp/How2Sign/videos/
+  keypoints_dir: /root/autodl-tmp/How2Sign/keypoints/
   train_label_path: ./data/How2Sign/emo_train.csv
   dev_label_path: ./data/How2Sign/emo_val.csv
   test_label_path: ./data/How2Sign/emo_val.csv
