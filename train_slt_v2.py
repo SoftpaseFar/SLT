@@ -88,7 +88,7 @@ def get_args_parser():
 
     a_parser.add_argument('--lambda', type=float, default=0.1, metavar='RATE')
 
-    a_parser.add_argument('--dataset', default='How2SignDataset', type=str,
+    a_parser.add_argument('--dataset', default='P14TDataset', type=str,
                           choices=['How2SignDataset', 'P14TDataset', 'CSLDailyDataset'])
     # a_parser.add_argument('--language', default='ch', type=str,
     # choices=['en', 'de', 'ch'])
