@@ -185,7 +185,7 @@ class TextDecoder(nn.Module):
     # SLT阶段正向反馈
     def forward_slt(self, tgt_input, encoder_hidden_states, encoder_attention_mask):
         # 增加随机性，防止模型过度自信
-        if random.random() < 0.81:
+        if random.random() < 0.9:
             decoder_input_ids = shift_tokens_right(tgt_input['input_ids'],
                                                    self.txt_decoder.config.pad_token_id)
         else:
