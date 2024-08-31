@@ -80,8 +80,8 @@ def get_args_parser():
     a_parser.add_argument('--patience', default=10, type=int)
     a_parser.add_argument('--save_model', default=True, type=bool)
 
-    a_parser.add_argument('--finetune', default=True, type=bool)
-    a_parser.add_argument('--succeed', default=False, type=bool)
+    a_parser.add_argument('--finetune', default=False, type=bool)
+    a_parser.add_argument('--succeed', default=True, type=bool)
 
     a_parser.add_argument('--need_keypoints', default=False, type=bool)
     a_parser.add_argument('--kp_alpha', type=float, default=0.95, metavar='RATE')
