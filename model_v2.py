@@ -191,7 +191,7 @@ class TextDecoder(nn.Module):
         else:
             decoder_input_ids = tgt_input['input_ids']
 
-        # 维度映射 
+        # 维度映射
         encoder_hidden_states = self.projector_128_1024(encoder_hidden_states)
 
         decoder_out = self.txt_decoder(
