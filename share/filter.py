@@ -35,6 +35,7 @@ def main():
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
         # 获取zip中的所有文件
         all_files = zip_ref.namelist()
+        print('all_files: ', all_files)
 
         # 过滤需要解压的文件
         files_to_extract = [file for file in all_files if file in filenames_to_extract]
