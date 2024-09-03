@@ -56,6 +56,8 @@ def main():
             except Exception as e:
                 print(f"解压文件 '{file}' 时发生错误: {e}")
                 unzip_failed.append(file)
+                continue
+
         print(f"解压缩完成，{len(files_to_extract)} 个文件已解压到 {output_directory}")
         print('加压失败文件数量：', len(unzip_failed))
         print('加压失败文件：', unzip_failed)
