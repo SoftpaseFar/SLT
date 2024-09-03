@@ -47,12 +47,18 @@ def main():
         print('不存在的文件：', files_not_found)
 
         print('正在解压...')
+        unzip_failed = []
         # 解压需要的文件到指定目录
         for file in files_to_extract:
-            print('解压：', file)
-            zip_ref.extract(file, output_directory)
-
-    print(f"解压缩完成，{len(files_to_extract)} 个文件已解压到 {output_directory}")
+            try:
+                zip_ref.extract(file, output_directory)
+                print('解压：', file)
+            except Exception as e:
+                print(f"解压文件 '{file}' 时发生错误: {e}")
+                unzip_failed.append(file)
+        print(f"解压缩完成，{len(files_to_extract)} 个文件已解压到 {output_directory}")
+        print('加压失败文件数量：', len(unzip_failed))
+        print('加压失败文件：', unzip_failed)
 
 
 # 判断当前模块是否为主模块
