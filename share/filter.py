@@ -41,6 +41,11 @@ def main():
         files_to_extract = [file for file in all_files if file in filenames_to_extract]
         print('文件数量校验：', len(files_to_extract))
 
+        # 找出不在zip文件中的文件名
+        files_not_found = [file for file in filenames_to_extract if file not in all_files]
+        print('不存在的文件数量：', len(files_not_found))
+        print('不存在的文件：', files_not_found)
+
         print('正在解压...')
         # 解压需要的文件到指定目录
         for file in files_to_extract:
