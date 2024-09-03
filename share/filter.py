@@ -26,7 +26,7 @@ def main():
     with open(csv_file_path, mode='r', encoding='utf-8') as file:
         reader = csv.DictReader(file, delimiter='\t')  # 假设CSV文件是使用制表符分隔
         for row in reader:
-            sentence_name = row['SENTENCE_NAME'].strip() + '.mp4'  # 生成文件名
+            sentence_name = 'raw_videos/' + row['SENTENCE_NAME'].strip() + '.mp4'  # 生成文件名
             filenames_to_extract.add(sentence_name)
 
     print('需要解压文件数量：', len(filenames_to_extract))
@@ -35,7 +35,7 @@ def main():
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
         # 获取zip中的所有文件
         all_files = zip_ref.namelist()
-        print('all_files: ', all_files)
+        # print('all_files: ', all_files)
 
         # 过滤需要解压的文件
         files_to_extract = [file for file in all_files if file in filenames_to_extract]
