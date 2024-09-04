@@ -326,6 +326,19 @@ def dir_is_exist(base_path, subdir):
     return flag
 
 
+# 检查video是否已经提取
+def video_not_exists_in_directory(file_name, directory_path):
+    # 构建文件的完整路径
+    file_path = os.path.join(directory_path, file_name)
+
+    # 使用 os.path.isfile() 检查文件是否存在
+    if os.path.isfile(file_path):
+        print('忽略: ', file_name)
+        return False  # 文件存在
+    else:
+        return True  # 文件不存在
+
+
 if __name__ == '__main__':
     model, tracker, pose_dataset, detector = load_model()
     output_path = args.outputpath
@@ -351,8 +364,15 @@ if __name__ == '__main__':
     videos_dir = args.video
     video_paths = []
     if videos_dir:
-        video_paths = [os.path.join(videos_dir, d) for d in os.listdir(videos_dir) if
-                       os.path.isfile(os.path.join(videos_dir, d))]
+        base_path = args.checkpath
+        if base_path:
+            video_paths = [os.path.join(videos_dir, d) for d in os.listdir(videos_dir) if
+                           os.path.isfile(os.path.join(videos_dir, d)) and (
+                               video_not_exists_in_directory(d, base_path))]
+            print('待处理的 video_paths: ', len(video_paths))
+        else:
+            video_paths = [os.path.join(videos_dir, d) for d in os.listdir(videos_dir) if
+                           os.path.isfile(os.path.join(videos_dir, d))]
 
     if len(input_paths):
         # print(input_paths)

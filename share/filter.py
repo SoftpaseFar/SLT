@@ -58,7 +58,7 @@ def main():
                 unzip_failed.append(file)
                 continue
 
-        print(f"解压缩完成，{len(files_to_extract)} 个文件已解压到 {output_directory}")
+        print(f"解压缩完成，{len(files_to_extract) - len(unzip_failed)} 个文件已解压到 {output_directory}")
         print('加压失败文件数量：', len(unzip_failed))
         print('加压失败文件：', unzip_failed)
 
@@ -66,3 +66,8 @@ def main():
 # 判断当前模块是否为主模块
 if __name__ == '__main__':
     main()
+
+# 不存在的文件： ['raw_videos/1mdMz4RkRdA_19-8-rgb_front.mp4', 'raw_videos/1mdMz4RkRdA_28-8-rgb_front.mp4', 'raw_videos/CH7AviIr0-0_15-8-rgb_front.mp4', 'raw_videos/bpyAuV3jNIc_11-8-rgb_front.mp4', 'raw_videos/1mdMz4RkRdA_21-8-rgb_front.mp4', 'raw_videos/1P6n7Tv8oco_24-8-rgb_front.mp4', 'raw_videos/B_ye00IgI4w_16-5-rgb_front.mp4', 'raw_videos/f1R7MZSlOOg_11-5-rgb_front.mp4', 'raw_videos/CH7AviIr0-0_19-8-rgb_front.mp4', 'raw_videos/1mdMz4RkRdA_23-8-rgb_front.mp4', 'raw_videos/dzctDQsw2dk_12-8-rgb_front.mp4']
+# 加压失败文件： ['raw_videos/077IIb5uuCs_7-5-rgb_front.mp4', 'raw_videos/1r9BuA9JwsY_0-11-rgb_front.mp4']
+# 加压失败文件： ['raw_videos/077IIb5uuCs_7-5-rgb_front.mp4', 'raw_videos/1r9BuA9JwsY_0-11-rgb_front.mp4']
+# python filter.py -zip_path ./videos_zip/val_rgb_front_clips.zip -csv_path ./emo_val.csv -output_path ~/autodl-tmp/How2Sign/
