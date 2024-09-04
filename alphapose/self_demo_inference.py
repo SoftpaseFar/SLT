@@ -327,14 +327,15 @@ def dir_is_exist(base_path, subdir):
 
 
 # 检查video是否已经提取
-def video_not_exists_in_directory(file_name, directory_path):
+def video_not_exists_in_directory(video_name, directory_path):
     # 构建文件的完整路径
-    file_path = os.path.join(directory_path, file_name)
+    video_dir = os.path.splitext(video_name)[0]
+    file_path = os.path.join(directory_path, video_dir)
     print('file_path', file_path)
 
     # 使用 os.path.isfile() 检查文件是否存在
-    if os.path.isfile(file_path):
-        print('忽略: ', file_name)
+    if os.path.isdir(file_path):
+        print('忽略: ', video_dir)
         return False  # 文件存在
     else:
         return True  # 文件不存在
