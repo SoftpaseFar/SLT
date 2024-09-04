@@ -330,6 +330,7 @@ def dir_is_exist(base_path, subdir):
 def video_not_exists_in_directory(file_name, directory_path):
     # 构建文件的完整路径
     file_path = os.path.join(directory_path, file_name)
+    print('file_path', file_path)
 
     # 使用 os.path.isfile() 检查文件是否存在
     if os.path.isfile(file_path):
