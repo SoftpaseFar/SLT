@@ -54,7 +54,7 @@ class How2SignDataset(Dataset):
 
     def _load_keypoints(self, path):
         data = utils.load_json(path)
-        video_vectors = [frame_data['people'][0]['pose_keypoints_2d'] for frame_data in data.values()]
+        video_vectors = [frame_data['bodies'][0]['joints'] for frame_data in data.values()]
         # print("video_vectors[0]:", len(video_vectors[0]))
         # 如果关键点向量数量超过最大长度，随机抽取最大长度的关键点向量，并保持顺序
         if len(video_vectors) > self.max_length:
