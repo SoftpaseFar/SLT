@@ -192,9 +192,11 @@ def write_log(filename, phase, **kwargs):
 
 def log(phase, **kwargs):
     if 'vlp' in phase:
-        write_log('./log/vlp.txt', phase, **kwargs)
+        write_log('trash/vlp.txt', phase, **kwargs)
     elif 'slt' in phase:
-        write_log('./log/slt.txt', phase, **kwargs)
+        write_log('trash/slt.txt', phase, **kwargs)
+    elif 'pred' in phase:
+        write_log('trash/pred.txt', phase, **kwargs)
     else:
         print(f"{Back.RED}保存失败{Back.RESET}")
 

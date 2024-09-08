@@ -35,7 +35,7 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 def get_args_parser():
     a_parser = argparse.ArgumentParser('SLT scripts', add_help=False)
     a_parser.add_argument('--batch_size', default=1, type=int)
-    a_parser.add_argument('--epochs', default=20, type=int)
+    a_parser.add_argument('--epochs', default=1, type=int)
 
     a_parser.add_argument('--config', type=str, default='./config.yaml')
     a_parser.add_argument('--device', default='cuda')
@@ -411,6 +411,12 @@ def evaluate(model, dataloader, criterion, device, tokenizer):
                         hyp = "neutral -<empty>-"
                     print('hyp: ', hyp)
                     print('ref: ', ref)
+
+                    utils.log('pred',
+                              hyp=hyp,
+                              ref=ref
+                              )
+
                     emo_collection.append(utils.compare_first_words(hyp, ref))
                     hyp = utils.remove_duplicates(hyp)
                     ref = utils.remove_duplicates(ref)
